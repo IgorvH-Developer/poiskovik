@@ -1,0 +1,30 @@
+{
+	"nodes":[
+		{"id":"db549ae4c221efbe","type":"text","text":"Векторная база данных (возможно с различными модальностями).","x":-760,"y":83,"width":300,"height":154},
+		{"id":"745721c20aa48226","type":"text","text":"Ранжирующий алгоритм (например Cross Encoder)","x":480,"y":83,"width":260,"height":120},
+		{"id":"ed6840ce8fd5a805","type":"text","text":"**Поисковик**. \nСкорее всего будет Dense Retriever (с использованием семантических векторов), но если будет слишком медленно, то архитектура будет переделана под bag of words.","x":-290,"y":72,"width":396,"height":177},
+		{"id":"b6fe549685b39edb","type":"text","text":"Преобразование запроса в вектор (stack encoder). Fine-tuning модели","x":-265,"y":-60,"width":346,"height":60},
+		{"id":"b3ac15fb321dce3a","type":"text","text":"Преобразование запрос в более понятный вид с помощью LLM. \nВозможно использование RAG Fusion для получения нескольких вариантов запроса.","x":-302,"y":-260,"width":421,"height":120},
+		{"id":"68cbe189b90a12dc","type":"text","text":"Запрос пользователя","x":-215,"y":-400,"width":247,"height":60},
+		{"id":"f8bb255fb37ba603","type":"text","text":"Модель-генератор ответа.","x":-235,"y":610,"width":287,"height":60},
+		{"id":"760668e237524913","type":"text","text":"**Провести анализ способов fine-tuning моделей**. \nА конкретно, что значит провести fine-tuning модели для encoding'а текста при работе в поисковике\nКакие модели можно дообучить (с описанием характеристик: необходимые время и ресурсы для дообучения, latency при работе)","x":610,"y":-156,"width":500,"height":193},
+		{"id":"53c9f7f2db735b08","type":"text","text":"**Провести анализ методов для данного преобразования**. \nВсегда ли лучшие методы связаны с моделями машинного обучения? \nКакие модели можно использовать для этой задачи (с описанием характеристик: нужные ресурсы для работы, latency при работе)?","x":610,"y":-400,"width":500,"height":220},
+		{"id":"b6104734538c2f78","x":360,"y":545,"width":550,"height":190,"type":"text","text":"**Провести анализ моделей-суммаризаторов**, то есть моделей работающих по схеме (запрос; набор текстов) $\\to$ ответ на запрос на основе переданных текстов.\nС описанием характеристик: необходимые время и ресурсы для дообучения, latency при работе."},
+		{"id":"39ddc0dcf95c3518","type":"text","text":"Бейзлайн - **Apache Lucene**","x":-265,"y":-600,"width":346,"height":100},
+		{"id":"d84c21ce88b011a7","x":-910,"y":-240,"width":450,"height":240,"type":"text","text":"**Провести анализ инструментов для построения и работы с векторными базами данных**.\nСравнить вариант БД с описанием их характеристик: время поиска по ключу, время добавления/удаления элементов."}
+	],
+	"edges":[
+		{"id":"6dd8bc5a02d420d4","fromNode":"b3ac15fb321dce3a","fromSide":"bottom","toNode":"b6fe549685b39edb","toSide":"top","label":"Текст"},
+		{"id":"7306ebda3e478c53","fromNode":"b6fe549685b39edb","fromSide":"bottom","toNode":"ed6840ce8fd5a805","toSide":"top","label":"Вектор"},
+		{"id":"fd3c05d5bcf00f71","fromNode":"ed6840ce8fd5a805","fromSide":"left","toNode":"db549ae4c221efbe","toSide":"right","label":"Вектор"},
+		{"id":"6b4ccfa61074c10f","fromNode":"db549ae4c221efbe","fromSide":"bottom","toNode":"ed6840ce8fd5a805","toSide":"bottom","label":"Отобранные объекты из БД"},
+		{"id":"f73d68d4c67cee9f","fromNode":"ed6840ce8fd5a805","fromSide":"right","toNode":"745721c20aa48226","toSide":"left","label":"Отобранные объекты из бд"},
+		{"id":"b6d4ed87eb928f7e","fromNode":"745721c20aa48226","fromSide":"bottom","toNode":"ed6840ce8fd5a805","toSide":"bottom","label":"Упорядоченные объекты из бд"},
+		{"id":"884ca1cdead3bac9","fromNode":"ed6840ce8fd5a805","fromSide":"bottom","toNode":"f8bb255fb37ba603","toSide":"top","label":"Список текстовых объектов из бд"},
+		{"id":"ca4ba4d4c718f3d8","fromNode":"68cbe189b90a12dc","fromSide":"bottom","toNode":"b3ac15fb321dce3a","toSide":"top","label":"Текст"},
+		{"id":"26a9946dc62153d5","fromNode":"b3ac15fb321dce3a","fromSide":"top","toNode":"53c9f7f2db735b08","toSide":"left","label":"Исследование 1"},
+		{"id":"9321ff8ea86a8137","fromNode":"b6fe549685b39edb","fromSide":"top","toNode":"760668e237524913","toSide":"left","label":"Исследование 2"},
+		{"id":"fa4015b3fdcbf9b2","fromNode":"db549ae4c221efbe","fromSide":"right","toNode":"d84c21ce88b011a7","toSide":"right","label":"Исследование 3"},
+		{"id":"b04aadea69ce8fab","fromNode":"f8bb255fb37ba603","fromSide":"top","toNode":"b6104734538c2f78","toSide":"top","label":"Исследование 4"}
+	]
+}
