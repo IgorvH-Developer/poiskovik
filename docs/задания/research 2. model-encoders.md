@@ -42,6 +42,6 @@
 ## Выводы
 
 Топ отобранных моделей по приоритетности использования:
-1) sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (супер быстрая модель, но менее качественная чем остальные)
+1) sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (супер быстрая модель, но менее качественная чем отсальные)
 2) deepvk/USER-base (медленная, но качество среднее)
 3) deepvk/USER-bge-m3 (супер медленная, но с лучшим качеством)
