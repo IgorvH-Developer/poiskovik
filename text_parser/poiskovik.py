@@ -6,6 +6,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from abc import ABC, abstractmethod
 from urllib.parse import unquote
+import sqlite3
 
 
 class DocsRanker(ABC):
@@ -53,6 +54,21 @@ class Poiskovik(BaseHTTPRequestHandler):
         )
         return df
 
+    def get_rows_from_sql(self, indices):
+        def get_row_by_position(curs, table_name, position):
+            curs.execute(f'SELECT url, proc_article FROM {table_name} LIMIT 1 OFFSET ?', (position - 1,))
+            return curs.fetchone()
+        cursor = self.sqlConnection.cursor()
+        rows = [get_row_by_position(cursor, 'documents', int(idx)) for idx in indices]
+        return pd.DataFrame(rows)
+
+    # def get_rows_from_sql(self, indexes):
+    #     cursor = self.sqlConnection.cursor()
+    #     indexes_str = ', '.join(str(ind) for ind in indexes)
+    #     query = f"SELECT url, proc_article FROM documents WHERE \"index\" IN ({indexes_str})"
+    #     cursor.execute(query)
+    #     return pd.DataFrame(cursor.fetchall())
+
     def getVectorDB(self, path):
         return faiss.read_index(path)
 
@@ -64,17 +80,21 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     def retrieveDocsAndUrls(self, indexes):
         urlsAndDocs = self.get_rows_from_csv(self.textsCsvPath, indexes)[[2, 5]]
+        # urlsAndDocs = self.get_rows_from_sql(indexes)
         urlsAndDocs = urlsAndDocs.fillna('stub')
         return urlsAndDocs[2], urlsAndDocs[5]
+        # return urlsAndDocs[0], urlsAndDocs[1]
 
     def rankDocuments(self, query, indexes, ranker):
         urls, docs = self.retrieveDocsAndUrls(indexes)
+        print("Получение текстов из БД. ГОТОВО!")
         doc_scores = ranker.rankDocuments(query, docs)
         sorted_idx = np.argsort(doc_scores)
         return list(docs.iloc[sorted_idx[::-1]]), list(urls.iloc[sorted_idx[::-1]]), doc_scores[sorted_idx[::-1]]
 
     def getSortedDocumentsWithUrls(self, query, encoder, kDocuments, ranker):
         indexes = self.findVectorsIndexes(query, encoder, kDocuments)
+        print("Векторный поиск. ГОТОВО!")
         return self.rankDocuments(query, indexes, ranker)
 
     def sendAnswer(self, query):
@@ -83,6 +103,7 @@ class Poiskovik(BaseHTTPRequestHandler):
         # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(lemmatize))
         # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(stem))
         docs, urls, scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, CrossEncoderRanker())
+        print("Ранжирование. ГОТОВО!")
 
         response_message = f"Лучший ответ: {docs[0]} \n\n"
         response_message += '\n'.join(urls)
@@ -118,7 +139,9 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     vectorDBPath = "./data/data_bases/vectorDB.index"
     textsCsvPath = "./data/data_bases/texts.csv"
+    metadataDBPath = "./data/data_bases/documentsMetadataDB.db"
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
+    sqlConnection = sqlite3.connect(metadataDBPath)
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
