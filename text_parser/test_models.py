@@ -14,6 +14,7 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import nltk
 from nltk.corpus import stopwords
+import sqlite3
 
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT, ID
@@ -292,10 +293,28 @@ def findVectorsIndexes(query, encoder, kDocuments):
   D, I = index.search(np.array([queryEmbd]), kDocuments)
   return I[0]
 
+def findVectorsDistsAndIndexes(query, encoder, kDocuments):
+  index = getVectorDB(vectorDBPath)
+  queryEmbd = encoder.encode(query, normalize_embeddings=True)
+  D, I = index.search(np.array([queryEmbd]), kDocuments)
+  return D[0], I[0]
+
+sqlConnection = sqlite3.connect(metadataDBPath)
+
+def get_rows_from_sql(indices):
+    def get_row_by_position(curs, table_name, position):
+        curs.execute(f'SELECT url, proc_article FROM {table_name} LIMIT 1 OFFSET ?', (position - 1,))
+        return curs.fetchone()
+    cursor = sqlConnection.cursor()
+    rows = [get_row_by_position(cursor, 'documents', int(idx)) for idx in indices]
+    return pd.DataFrame(rows)
+
 def retrieveDocsAndUrls(indexes):
-  urlsAndDocs = get_rows_from_csv(textsCsvPath, indexes)[[2, 5]]
-  urlsAndDocs = urlsAndDocs.fillna('stub')
-  return urlsAndDocs[2], urlsAndDocs[5]
+    #urlsAndDocs = get_rows_from_csv(textsCsvPath, indexes)[[2, 5]]
+    urlsAndDocs = get_rows_from_sql(indexes)
+    urlsAndDocs = urlsAndDocs.fillna('stub')
+    #return urlsAndDocs[2], urlsAndDocs[5]
+    return urlsAndDocs[0], urlsAndDocs[1]
 
 def rankDocuments(query, indexes, ranker):
     urls, docs = retrieveDocsAndUrls(indexes)
@@ -312,7 +331,7 @@ def getUnsortedDocumentsWithUrls(query, encoder, kDocuments):
   return retrieveDocsAndUrls(indexes)
 
 
-def test_model(filename, ranker = None, document_num = 50):
+def test_model(filename, ranker = None, document_num = 50, use_dists = False):
     real_urls = []
     queries = []
     with open(filename, encoding='utf-8') as f:
@@ -329,29 +348,28 @@ def test_model(filename, ranker = None, document_num = 50):
         N = len(queries)
         for i in range(N):
             start_time = time.time()
-            indexes = findVectorsIndexes(queries[i], model, document_num)[::-1]
+            indexes = findVectorsIndexes(queries[i], model, document_num)
             end_time = time.time()
             time_arr[i] = end_time - start_time
             urls, docs = retrieveDocsAndUrls(indexes)
-            start_time = time.time()
-            sorted_idx = np.argsort(indexes)
-            end_time = time.time()
-            anses = urls.iloc[sorted_idx[::-1]].to_numpy()
-            for j in range(anses.shape[0]):
-                if anses[j] == real_urls[i]:
+            for j in range(urls.shape[0]):
+                if urls[j] == real_urls[i]:
                     pos_arr[i] = j
                     break
     else:
         N = len(queries)
         for i in range(N):
             start_time = time.time()
-            indexes = findVectorsIndexes(queries[i], model, document_num)
+            dists, indexes = findVectorsDistsAndIndexes(queries[i], model, document_num)
             end_time = time.time()
             time_arr[i] = end_time - start_time
             urls, docs = retrieveDocsAndUrls(indexes)
             start_time = time.time()
             doc_scores = ranker.rankDocuments(queries[i], docs)
-            sorted_idx = np.argsort(doc_scores)
+            if use_dists:
+                sorted_idx = np.argsort(doc_scores / dists)
+            else:
+                sorted_idx = np.argsort(doc_scores)
             end_time = time.time()
             anses = urls.iloc[sorted_idx[::-1]].to_numpy()
             time_arr[i] += end_time - start_time
@@ -368,9 +386,15 @@ def metric_inv(n, coef = 5):
     else:
         return coef / (n + coef)
 
+def metric_in_top_k(n, k = 5):
+    if -1 < n < k:
+        return 1.0
+    else:
+        return 0.0
 
-def eval_model(filename, ranker = None, echo = False, document_num = 50, metric = metric_inv):
-    p, t = test_model(filename, ranker = ranker, document_num = document_num)
+
+def eval_model(filename, ranker = None, echo = False, document_num = 50, use_dists = False, metric = metric_inv):
+    p, t = test_model(filename, ranker = ranker, document_num = document_num, use_dists = use_dists)
     if echo:
         print(p)
         print(t)
@@ -383,10 +407,60 @@ def multi_eval(filenames, rankers, document_nums, metrics):
     for filename in filenames:
         for ranker in rankers:
             for document_num in document_nums:
-                for metric in metrics:
-                    print(f'filename: {filename[0]}, ranker: {ranker[0]}, doc num: {document_num}, metric: {metric[0]}, ')
-                    print(eval_model(filename[1], ranker = ranker[1], document_num = document_num, metric = metric[1]))
+                if ranker[1] is None:
+                    for metric in metrics:
+                        print(f'filename: {filename[0]}, ranker: {ranker[0]}, doc num: {document_num}, metric: {metric[0]}, ')
+                        print(eval_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = False, metric = metric[1]))
+                else:
+                    for use_dists in [False, True]:
+                        for metric in metrics:
+                            print(f'filename: {filename[0]}, ranker: {ranker[0]}, doc num: {document_num}, use dists: {use_dists}, metric: {metric[0]}, ')
+                            print(eval_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = use_dists, metric = metric[1]))
 
+
+def general_test(filenames, rankers, document_nums, metrics):
+    for ranker in rankers:
+        for document_num in document_nums:
+            #if ranker[1] is None:
+            if True:
+                scores = np.zeros((len(filenames), len(metrics)))
+                times = np.zeros(len(filenames))
+                for k in range(len(filenames)):
+                    filename = filenames[k]
+                    p, t = test_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = False)
+                    for i in range(len(metrics)):
+                        scored = np.zeros(p.shape[0])
+                        for j in range(p.shape[0]):
+                            scored[j] = metrics[i][1](p[j])
+                        scores[k][i] = scored.mean()
+                    times[k] = t.mean()
+                print(f'ranker: {ranker[0]}, doc num: {document_num}')
+                times = times.mean()
+                scores = scores.mean(axis = 0)
+                res_str = f'time: {times}'
+                for i in range(len(metrics)):
+                    res_str += f' {metrics[i][0]}: {scores[i]}'
+                print(res_str)
+            else:
+                for use_dists in [False, True]:
+                    scores = np.zeros((len(filenames), len(metrics)))
+                    times = np.zeros(len(filenames))
+                    for k in range(len(filenames)):
+                        filename = filenames[k]
+                        p, t = test_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = use_dists)
+                        for i in range(len(metrics)):
+                            scored = np.zeros(p.shape[0])
+                            for j in range(p.shape[0]):
+                                scored[j] = metrics[i][1](p[j])
+                            scores[k][i] = scored.mean()
+                        times[k] = t.mean()
+                    print(f'ranker: {ranker[0]}, doc num: {document_num}, use_dists: {use_dists}')
+                    times = times.mean()
+                    scores = scores.mean(axis = 0)
+                    res_str = f'time: {times}'
+                    for i in range(len(metrics)):
+                        res_str += f' {metrics[i][0]}: {scores[i]}'
+                    print(res_str)
 
 if __name__ == '__main__':
     from sys import argv
@@ -414,4 +488,6 @@ if __name__ == '__main__':
             for word in lines[3][:-1].split(' '):
                 if word == 'inv_5':
                     metrics.append([word, metric_inv])
-        multi_eval(filenames, rankers, document_nums, metrics)
+                if word == 'in_top_5':
+                    metrics.append([word, metric_in_top_k])
+        general_test(filenames, rankers, document_nums, metrics)
