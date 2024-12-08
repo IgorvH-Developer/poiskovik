@@ -47,6 +47,9 @@ class CrossEncoderRanker(DocsRanker):
         return np.array([self.reranker_model.predict([[query, doc]])[0] for doc in docs])
 
 class Poiskovik(BaseHTTPRequestHandler):
+    def __init__(self, request, client_address, server):
+        super().__init__(request, client_address, server)
+
     def summarizeText(self, docs, query=None):
 
         max_input = 1512
@@ -121,17 +124,22 @@ class Poiskovik(BaseHTTPRequestHandler):
         return self.rankDocuments(query, indexes, ranker)
 
     def sendAnswer(self, query):
-        kDocuments = 50
-        # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker())
-        # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(lemmatize))
-        # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(stem))
-        docs, urls, scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, CrossEncoderRanker())
-        print("Ранжирование. ГОТОВО!")
-        docsToSummarize = 5
-        summary = self.summarizeText(docs[:docsToSummarize], query)
+        print(query)
+        if query in query_history.keys():
+            response_message = query_history[query]
+        else:
+            kDocuments = 50
+            # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker())
+            # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(lemmatize))
+            # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(stem))
+            docs, urls, scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, CrossEncoderRanker())
+            print("Ранжирование. ГОТОВО!")
+            docsToSummarize = 5
+            summary = self.summarizeText(docs[:docsToSummarize], query)
 
-        response_message = f"Ответ: {summary} \n\n"
-        response_message += '\n'.join(urls)
+            response_message = f"Ответ: {summary} \n\n"
+            response_message += '\n'.join(urls)
+            query_history[query] = response_message
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain; charset=utf-8')
@@ -169,6 +177,8 @@ class Poiskovik(BaseHTTPRequestHandler):
     tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
     modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
     sqlConnection = sqlite3.connect(metadataDBPath)
+
+query_history = dict()
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
