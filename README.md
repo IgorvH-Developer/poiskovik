@@ -3,8 +3,16 @@ Search system
 
 ### Готовые базы данных можно скачать по ссылке: 
 
-1. Единая БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1v0C2u1l1vNKOjVtdGc5pG0msd9dTC0EQ/view?usp=sharing
-2. Единая БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1PnDPgDIhrbA5MMcR4maIKYG5cIDzTcSE/view?usp=sharing
+Единая большая БД:
+* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1v0C2u1l1vNKOjVtdGc5pG0msd9dTC0EQ/view?usp=sharing
+
+Несколько маленьких БД, в которых хранятся те же документы:
+* БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1PnDPgDIhrbA5MMcR4maIKYG5cIDzTcSE/view?usp=sharing
+* БД с фалами из папок AC, AE, AF: https://drive.google.com/file/d/1IzvYGFhlzuVd9bmEsrGRA2mIWIzHuvBV/view?usp=sharing
+* БД с фалами из папок AG, AH, AI: https://drive.google.com/file/d/14X2v96_u3ytjwGaje3RUhQX3aMT8LaX8/view?usp=sharing
+* БД с фалами из папок AJ, AK, AL: https://drive.google.com/file/d/1NUBi3YrZRzgdcOX4tBpX5z1tG-tLH7OL/view?usp=sharing
+* БД с фалами из папок AM, AN, AO: https://drive.google.com/file/d/1LwfmhxRBfqf-YDg6kilqHaJMkIYChavY/view?usp=sharing
+* БД с фалами из папок AP, AQ, AR: https://drive.google.com/file/d/1x3kMJbmmqHImcRwZJz-JvswhpTvKzyf8/view?usp=sharing
 
 Под базами данных имеются ввиду две БД: векторная БД, БД с метаданными.
 Базы данных хранят документы из википедии, а конкретнее, документы разбиваются на блоки в соответствии с оглавлением документов.
