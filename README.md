@@ -1,37 +1,43 @@
 # poiskovik
 Search system
 
-### Готовые базы данных можно скачать по ссылке: 
+## Готовые базы данных можно скачать по ссылке: 
 
 Единая большая БД:
 * БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1v0C2u1l1vNKOjVtdGc5pG0msd9dTC0EQ/view?usp=sharing
 
 Несколько маленьких БД, в которых хранятся те же документы:
-* БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1PnDPgDIhrbA5MMcR4maIKYG5cIDzTcSE/view?usp=sharing
-* БД с фалами из папок AC, AE, AF: https://drive.google.com/file/d/1IzvYGFhlzuVd9bmEsrGRA2mIWIzHuvBV/view?usp=sharing
-* БД с фалами из папок AG, AH, AI: https://drive.google.com/file/d/14X2v96_u3ytjwGaje3RUhQX3aMT8LaX8/view?usp=sharing
-* БД с фалами из папок AJ, AK, AL: https://drive.google.com/file/d/1NUBi3YrZRzgdcOX4tBpX5z1tG-tLH7OL/view?usp=sharing
-* БД с фалами из папок AM, AN, AO: https://drive.google.com/file/d/1LwfmhxRBfqf-YDg6kilqHaJMkIYChavY/view?usp=sharing
-* БД с фалами из папок AP, AQ, AR: https://drive.google.com/file/d/1x3kMJbmmqHImcRwZJz-JvswhpTvKzyf8/view?usp=sharing
+* БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1PnDPgDIhrbA5MMcR4maIKYG5cIDzTcSE/view?usp=sharing 744954 элемента
+* БД с фалами из папок AC, AE, AF: https://drive.google.com/file/d/1IzvYGFhlzuVd9bmEsrGRA2mIWIzHuvBV/view?usp=sharing 744954 элемента
+* БД с фалами из папок AG, AH, AI: https://drive.google.com/file/d/14X2v96_u3ytjwGaje3RUhQX3aMT8LaX8/view?usp=sharing 744954 элемента
+* БД с фалами из папок AJ, AK, AL: https://drive.google.com/file/d/1NUBi3YrZRzgdcOX4tBpX5z1tG-tLH7OL/view?usp=sharing 744954 элемента
+* БД с фалами из папок AM, AN, AO: https://drive.google.com/file/d/1LwfmhxRBfqf-YDg6kilqHaJMkIYChavY/view?usp=sharing 744954 элемента
+* БД с фалами из папок AP, AQ, AR: https://drive.google.com/file/d/1x3kMJbmmqHImcRwZJz-JvswhpTvKzyf8/view?usp=sharing 744954 элемента
+* БД с фалами из папок AS, AT, AU: https://drive.google.com/file/d/10gStaAhQWz3h0HM_AFlYHXsEuIi3zWXu/view?usp=sharing 744954 элемента
+* БД с фалами из папок AW, AV, AX: https://drive.google.com/file/d/1sHd6nMWp-919gNwuXTpwrN2SjdL1yaLl/view?usp=sharing 744954 элемента
+* БД с фалами из папок AY, AZ: https://drive.google.com/file/d/188V9v1-DWiSH6fR01e5bRWkDkTFC27jP/view?usp=sharing 744954 элемента
 
 Под базами данных имеются ввиду две БД: векторная БД, БД с метаданными.
 Базы данных хранят документы из википедии, а конкретнее, документы разбиваются на блоки в соответствии с оглавлением документов.
 Каждый блок хранится в виде вектрора в вектрной БД и в виде метаданных во второй БД.
 
 
-#### Векторная БД - vectorDB.index
+### Векторная БД - vectorDB.index
 - Вектор блока текста
 - Индекс вектора
 
-#### БД с метаданными 
+#### Принципы выбора индекса
+https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index
 
-##### SQL БД - documentsMetadataDB.db (основной вариант)
+### БД с метаданными 
+
+#### SQL БД - documentsMetadataDB.db (основной вариант)
 - index
 - url
 - title
 - proc_article
 
-##### texts.csv (старый вариант)
+#### texts.csv (старый вариант)
 - id
 - url
 - текст блока
@@ -39,7 +45,7 @@ Search system
 
 *Порядок записей в вектроной БД и БД с метаданными синхронизирован*
 
-### Тестовый скрипт (test_models.py)
+## Тестовый скрипт (test_models.py)
 
 В папке data/queries_split лежат статьи из википедии, разбитые на абзацы, к каждому из которых придуман вопрос. Тестовая система берёт один такой файл, запускает поисковик на каждом из вопросов, а затем измеряет, как быстро были получены результаты и на каком месте был "правильный" абзац.
 

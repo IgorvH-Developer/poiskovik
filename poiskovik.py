@@ -8,7 +8,17 @@ from abc import ABC, abstractmethod
 from urllib.parse import unquote
 import sqlite3
 from transformers import AutoModelForSeq2SeqLM, T5TokenizerFast
+import nltk
+from nltk.stem.snowball import SnowballStemmer
+import pymorphy2
+import time
+import logging
+from concurrent.futures import ThreadPoolExecutor
 
+# Настройка логирования
+logging.basicConfig(
+    filename='logs/queries.log', filemode='a', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 class DocsRanker(ABC):
     @abstractmethod
@@ -50,8 +60,15 @@ class Poiskovik(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         super().__init__(request, client_address, server)
 
-    def summarizeText(self, docs, query=None):
+    def log_details(self, text):
+        logging.info(f"{text}")
 
+    def log_details(self, text, start_time):
+        end_time = time.time()
+        processing_time = end_time - start_time
+        logging.info(f"{text} {processing_time:.2f} секунд.")
+
+    def summarizeText(self, docs, query=None):
         max_input = 1512
         task_prefix = "Find answer on question: "
         input_seq = ""
@@ -66,9 +83,7 @@ class Poiskovik(BaseHTTPRequestHandler):
             truncation=True,
             return_tensors="pt",
         )
-
         predicts = self.modelSummarizer.generate(encoded['input_ids'])  # # Прогнозирование
-
         return self.tokenizer.batch_decode(predicts, skip_special_tokens=True)  # Декодируем данные
 
     def get_rows_from_csv(self, filename, indices):
@@ -79,18 +94,16 @@ class Poiskovik(BaseHTTPRequestHandler):
         )
         return df
 
-    # def get_rows_from_sql(self, indices):
-    #     def get_row_by_position(curs, table_name, position):
-    #         curs.execute(f'SELECT url, proc_article FROM {table_name} LIMIT 1 OFFSET ?', (position - 1,))
-    #         return curs.fetchone()
-    #     cursor = self.sqlConnection.cursor()
-    #     rows = [get_row_by_position(cursor, 'documents', int(idx)) for idx in indices]
-    #     return pd.DataFrame(rows)
-
     def get_rows_from_sql(self, indexes):
         cursor = self.sqlConnection.cursor()
-        indexes_str = ', '.join(str(ind) for ind in indexes)
-        query = f"SELECT url, proc_article, article FROM documents WHERE \"index\" IN ({indexes_str})"
+        subqueries = []
+        for index in indexes:
+            subqueries.append(f"SELECT url, proc_article, article FROM documents WHERE \"index\" = {index}")
+        query = ' UNION ALL '.join(subqueries)
+
+        # conditions = ' OR '.join(f'"index" = {ind}' for ind in indexes)
+        # query = f'SELECT url, proc_article, article FROM documents WHERE {conditions}'
+
         cursor.execute(query)
         return pd.DataFrame(cursor.fetchall())
 
@@ -100,8 +113,8 @@ class Poiskovik(BaseHTTPRequestHandler):
     def findVectorsIndexes(self, query, encoder, kDocuments):
         index = self.getVectorDB(self.vectorDBPath)
         queryEmbd = encoder.encode(query, normalize_embeddings=True)
-        D, I = index.search(np.array([queryEmbd]), kDocuments)
-        return I[0]
+        D, I = index.search(np.array(queryEmbd), kDocuments)
+        return I[:len(query)]
 
     def retrieveDocsAndUrls(self, indexes):
         # urlsAndDocs = self.get_rows_from_csv(self.textsCsvPath, indexes)[[2, 4, 5]]
@@ -112,40 +125,79 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     def rankDocuments(self, query, indexes, ranker):
         urls, docs, fullDocs = self.retrieveDocsAndUrls(indexes)
-        print("Получение текстов из БД. ГОТОВО!")
         doc_scores = ranker.rankDocuments(query, docs)
         sorted_idx = np.argsort(doc_scores)
-        # return list(docs.iloc[sorted_idx[::-1]]), list(urls.iloc[sorted_idx[::-1]]), doc_scores[sorted_idx[::-1]]
         return list(fullDocs.iloc[sorted_idx[::-1]]), list(urls.iloc[sorted_idx[::-1]]), doc_scores[sorted_idx[::-1]]
 
-    def getSortedDocumentsWithUrls(self, query, encoder, kDocuments, ranker):
-        indexes = self.findVectorsIndexes(query, encoder, kDocuments)
-        print("Векторный поиск. ГОТОВО!")
-        return self.rankDocuments(query, indexes, ranker)
+    # def getSortedDocumentsWithUrls(self, query, encoder, kDocuments, ranker):
+    #     indexes = self.findVectorsIndexes(query, encoder, kDocuments)
+    #     print("Векторный поиск. ГОТОВО!")
+    #     return self.rankDocuments(query, indexes, ranker)
 
-    def sendAnswer(self, query):
-        print(query)
-        if query in query_history.keys():
-            response_message = query_history[query]
-        else:
-            kDocuments = 50
-            # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker())
-            # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(lemmatize))
-            # docs, urls, bm25_scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, Bm25Ranker(stem))
-            docs, urls, scores = self.getSortedDocumentsWithUrls(query, self.modelEncoder, kDocuments, CrossEncoderRanker())
-            print("Ранжирование. ГОТОВО!")
-            docsToSummarize = 5
-            summary = self.summarizeText(docs[:docsToSummarize], query)
+    def splitAllQueries(self, allQueries):
+        queries = []
+        responses = []
+        for question in allQueries.split('\n\n'):
+            if question in self.query_history.keys():
+                responses.append(self.query_history[question])
+                continue
+            queries.append(question)
+        return queries, responses
 
-            response_message = f"Ответ: {summary} \n\n"
-            response_message += '\n'.join(urls)
-            query_history[query] = response_message
+    def sendAnswer(self, allQueries):
+        kDocuments = 50
+        start_time = time.time()
+
+        queries, responses = self.splitAllQueries(allQueries)
+        logging.info(f"Для обработки получено вопросов {len(queries)}")
+        indexesForQueries = self.findVectorsIndexes(queries, self.modelEncoder, kDocuments)
+        self.log_details(f"Готов поиск в векторной БД ", start_time)
+
+        urlsAndDocs = self.get_rows_from_sql(indexesForQueries.flatten()).fillna('stub')
+        self.log_details(f"Готов поиск в текстовой БД ", start_time)
+
+        with ThreadPoolExecutor() as executor:
+            processed_queries = {
+                executor.submit(self.process_query, query, urlsAndDocs[idxStart:idxStart+kDocuments], self.ranker, start_time): (query, idxStart)
+                for query, idxStart in zip(queries, range(0, kDocuments*len(queries), kDocuments))
+            }
+            for proc_query in processed_queries:
+                try:
+                    question = proc_query.result()[0]
+                    response = proc_query.result()[1]
+                    responses.append(response)
+                    # self.query_history[question] = "Сохранённый ответ.\n" + response
+                except Exception as exc:
+                    logging.error(f"Ошибка обработки запроса {proc_query}: {exc}")
+
+        # for query, idxStart in zip(queries, range(0, kDocuments*len(queries), kDocuments)):
+        #     res = self.process_query(query, urlsAndDocs[idxStart:idxStart + kDocuments], self.ranker, start_time)
+        #     question = res[0]
+        #     response = res[1]
+        #     responses.append(response)
+        #     self.query_history[question] = "Сохранённый ответ.\n" + response
+
+        self.log_details(f"Вопросов {len(queries)} обработано за ", start_time)
+        response_message = "\n\n".join(responses)
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain; charset=utf-8')
         self.end_headers()
-
         self.wfile.write(response_message.encode('utf-8'))
+
+    def process_query(self, query, urlsAndDocs: pd.DataFrame, ranker, start_time):
+        urls, docs, fullDocs = urlsAndDocs[0], urlsAndDocs[1], urlsAndDocs[2]
+        doc_scores = ranker.rankDocuments(query, docs)
+        sorted_idx = np.argsort(doc_scores)
+        resDocs, urls, scores = list(fullDocs.iloc[sorted_idx[::-1]]), list(urls.iloc[sorted_idx[::-1]]), doc_scores[sorted_idx[::-1]]
+        self.log_details(f"Ранжирование готово ", start_time)
+
+        summarizeCount = 5
+        summary = self.summarizeText(resDocs[:summarizeCount], query)
+        self.log_details(f"Суммаризация готова ", start_time)
+
+        response_message = f"Ответ на вопрос {query}: {summary} \n\n" + '\n'.join(urls)
+        return [query, response_message]
 
     def do_GET(self):
         # Получаем вопрос из url
@@ -170,15 +222,19 @@ class Poiskovik(BaseHTTPRequestHandler):
 
         self.sendAnswer(query)
 
-    vectorDBPath = "text_parser/data/data_bases/vectorDB.index"
-    textsCsvPath = "text_parser/data/data_bases/texts.csv"
-    metadataDBPath = "text_parser/data/data_bases/documentsMetadataDB.db"
+    vectorDBPath = "text_parser/data/data_bases/monolit/vectorDB.index"
+    textsCsvPath = "text_parser/data/data_bases/monolit/texts.csv"
+    metadataDBPath = "text_parser/data/data_bases/monolit/documentsMetadataDB.db"
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
     tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
     modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
-    sqlConnection = sqlite3.connect(metadataDBPath)
 
-query_history = dict()
+    sqlConnection = sqlite3.connect(metadataDBPath, check_same_thread=False)
+    query_history = dict()
+    # ranker = Bm25Ranker()
+    # ranker = Bm25Ranker(lemmatize)
+    # ranker = Bm25Ranker(stem)
+    ranker = CrossEncoderRanker()
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
@@ -191,7 +247,7 @@ def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     finally:
         httpd.server_close()
         print('Сервер остановлен.')
-
+        logging.info('Сервер остановлен.')
 
 if __name__ == '__main__':
     from sys import argv
