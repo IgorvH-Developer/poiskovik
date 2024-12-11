@@ -148,14 +148,18 @@ class Poiskovik(BaseHTTPRequestHandler):
         kDocuments = 50
         start_time = time.time()
 
+        # Проверяем не сохранены ли у нас уже ответы на вопросы
         queries, responses = self.splitAllQueries(allQueries)
         logging.info(f"Для обработки получено вопросов {len(queries)}")
+        # Поиск в векторной БД для всех вопросов
         indexesForQueries = self.findVectorsIndexes(queries, self.modelEncoder, kDocuments)
         self.log_details(f"Готов поиск в векторной БД ", start_time)
 
+        # Получение документов и ссылок для всех вопросов
         urlsAndDocs = self.get_rows_from_sql(indexesForQueries.flatten()).fillna('stub')
         self.log_details(f"Готов поиск в текстовой БД ", start_time)
 
+        # Параллельное ранжирование и суммаризация для каждого вопроса
         with ThreadPoolExecutor() as executor:
             processed_queries = {
                 executor.submit(self.process_query, query, urlsAndDocs[idxStart:idxStart+kDocuments], self.ranker, start_time): (query, idxStart)
@@ -166,16 +170,10 @@ class Poiskovik(BaseHTTPRequestHandler):
                     question = proc_query.result()[0]
                     response = proc_query.result()[1]
                     responses.append(response)
+                    # Сохраняем уже обработанные вопросы, чтобы при получении его повторно не выполнять заново поиск
                     # self.query_history[question] = "Сохранённый ответ.\n" + response
                 except Exception as exc:
                     logging.error(f"Ошибка обработки запроса {proc_query}: {exc}")
-
-        # for query, idxStart in zip(queries, range(0, kDocuments*len(queries), kDocuments)):
-        #     res = self.process_query(query, urlsAndDocs[idxStart:idxStart + kDocuments], self.ranker, start_time)
-        #     question = res[0]
-        #     response = res[1]
-        #     responses.append(response)
-        #     self.query_history[question] = "Сохранённый ответ.\n" + response
 
         self.log_details(f"Вопросов {len(queries)} обработано за ", start_time)
         response_message = "\n\n".join(responses)
