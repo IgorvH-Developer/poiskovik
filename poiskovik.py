@@ -4,61 +4,28 @@ from rank_bm25 import BM25Okapi
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer, CrossEncoder
-from abc import ABC, abstractmethod
 from urllib.parse import unquote
 import sqlite3
 from transformers import AutoModelForSeq2SeqLM, T5TokenizerFast
-import nltk
-from nltk.stem.snowball import SnowballStemmer
-import pymorphy2
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from rankers.rankers import CrossEncoderRanker, Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum
 
 # Настройка логирования
 logging.basicConfig(
     filename='logs/queries.log', filemode='a', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-class DocsRanker(ABC):
-    @abstractmethod
-    def rankDocuments(self, query, docs):
-        pass
-
-class Bm25Ranker(DocsRanker):
-    # preprocess_func: переобразует запрос и документ в список слов
-    def __init__(self, preprocess_func = None) -> None:
-        self.preprocess_func = preprocess_func
-
-    def rankDocuments(self, query, docs):
-        if self.preprocess_func is None:
-            self.preprocess_func = lambda doc: doc.split()
-        tokenized_corpus = [self.preprocess_func(doc) for doc in docs]
-        bm25 = BM25Okapi(tokenized_corpus)
-        tokenized_query = self.preprocess_func(query)
-        return bm25.get_scores(tokenized_query)
-
-def lemmatize(doc):
-    morph = pymorphy2.MorphAnalyzer()
-    return [morph.parse(word)[0].normal_form for word in doc.split()]
-
-def stem(doc):
-   stemmer = SnowballStemmer("russian")
-   words = nltk.word_tokenize(doc, language="russian")
-   return [stemmer.stem(word) for word in words]
-
-
-class CrossEncoderRanker(DocsRanker):
-    def __init__(self) -> None:
-        # self.reranker_model = CrossEncoder('DiTy/cross-encoder-russian-msmarco', max_length=512, device='cuda')
-        self.reranker_model = CrossEncoder('DiTy/cross-encoder-russian-msmarco', max_length=512, device='cpu')
-
-    def rankDocuments(self, query, docs):
-        return np.array([self.reranker_model.predict([[query, doc]])[0] for doc in docs])
 
 class Poiskovik(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         super().__init__(request, client_address, server)
+        self.index = self.getVectorDB(self.vectorDBPath)
+        self.use_stemming = True
+        # self.ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if self.use_stemming else None)
+        self.ranker = CrossEncoderRanker()
+        self.quorum_threshold = 0.25
 
     def log_details(self, text):
         logging.info(f"{text}")
@@ -97,8 +64,9 @@ class Poiskovik(BaseHTTPRequestHandler):
     def get_rows_from_sql(self, indexes):
         cursor = self.sqlConnection.cursor()
         subqueries = []
+        processed_articles_column = 'stem_article' if self.use_stemming else 'proc_article'
         for index in indexes:
-            subqueries.append(f"SELECT url, proc_article, article FROM documents WHERE \"index\" = {index}")
+            subqueries.append(f"SELECT url, {processed_articles_column}, article FROM documents WHERE \"index\" = {index}")
         query = ' UNION ALL '.join(subqueries)
 
         # conditions = ' OR '.join(f'"index" = {ind}' for ind in indexes)
@@ -111,9 +79,8 @@ class Poiskovik(BaseHTTPRequestHandler):
         return faiss.read_index(path)
 
     def findVectorsIndexes(self, query, encoder, kDocuments):
-        index = self.getVectorDB(self.vectorDBPath)
         queryEmbd = encoder.encode(query, normalize_embeddings=True)
-        D, I = index.search(np.array(queryEmbd), kDocuments)
+        D, I = self.index.search(np.array(queryEmbd), kDocuments)
         return I[:len(query)]
 
     def retrieveDocsAndUrls(self, indexes):
@@ -185,6 +152,10 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     def process_query(self, query, urlsAndDocs: pd.DataFrame, ranker, start_time):
         urls, docs, fullDocs = urlsAndDocs[0], urlsAndDocs[1], urlsAndDocs[2]
+        docs = documents_filter_quorum(query, docs, stem if self.use_stemming else None, self.quorum_threshold)
+        if not docs:
+            return [query, f"Ответ на вопрос {query}: ничего не найдено"]
+
         doc_scores = ranker.rankDocuments(query, docs)
         sorted_idx = np.argsort(doc_scores)
         resDocs, urls, scores = list(fullDocs.iloc[sorted_idx[::-1]]), list(urls.iloc[sorted_idx[::-1]]), doc_scores[sorted_idx[::-1]]
@@ -229,10 +200,6 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     sqlConnection = sqlite3.connect(metadataDBPath, check_same_thread=False)
     query_history = dict()
-    # ranker = Bm25Ranker()
-    # ranker = Bm25Ranker(lemmatize)
-    # ranker = Bm25Ranker(stem)
-    ranker = CrossEncoderRanker()
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
