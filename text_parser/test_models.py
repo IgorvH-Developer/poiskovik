@@ -331,7 +331,7 @@ def getUnsortedDocumentsWithUrls(query, encoder, kDocuments):
   return retrieveDocsAndUrls(indexes)
 
 
-def test_model(filename, ranker = None, document_num = 50, use_dists = False):
+def test_model(filename, ranker = None, document_num = 50):
     real_urls = []
     queries = []
     with open(filename, encoding='utf-8') as f:
@@ -366,10 +366,7 @@ def test_model(filename, ranker = None, document_num = 50, use_dists = False):
             urls, docs = retrieveDocsAndUrls(indexes)
             start_time = time.time()
             doc_scores = ranker.rankDocuments(queries[i], docs)
-            if use_dists:
-                sorted_idx = np.argsort(doc_scores / dists)
-            else:
-                sorted_idx = np.argsort(doc_scores)
+            sorted_idx = np.argsort(doc_scores)
             end_time = time.time()
             anses = urls.iloc[sorted_idx[::-1]].to_numpy()
             time_arr[i] += end_time - start_time
@@ -393,8 +390,8 @@ def metric_in_top_k(n, k = 5):
         return 0.0
 
 
-def eval_model(filename, ranker = None, echo = False, document_num = 50, use_dists = False, metric = metric_inv):
-    p, t = test_model(filename, ranker = ranker, document_num = document_num, use_dists = use_dists)
+def eval_model(filename, ranker = None, echo = False, document_num = 50, metric = metric_inv):
+    p, t = test_model(filename, ranker = ranker, document_num = document_num)
     if echo:
         print(p)
         print(t)
@@ -407,60 +404,32 @@ def multi_eval(filenames, rankers, document_nums, metrics):
     for filename in filenames:
         for ranker in rankers:
             for document_num in document_nums:
-                if ranker[1] is None:
-                    for metric in metrics:
-                        print(f'filename: {filename[0]}, ranker: {ranker[0]}, doc num: {document_num}, metric: {metric[0]}, ')
-                        print(eval_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = False, metric = metric[1]))
-                else:
-                    for use_dists in [False, True]:
-                        for metric in metrics:
-                            print(f'filename: {filename[0]}, ranker: {ranker[0]}, doc num: {document_num}, use dists: {use_dists}, metric: {metric[0]}, ')
-                            print(eval_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = use_dists, metric = metric[1]))
+                for metric in metrics:
+                    print(f'filename: {filename[0]}, ranker: {ranker[0]}, doc num: {document_num}, metric: {metric[0]}, ')
+                    print(eval_model(filename[1], ranker = ranker[1], document_num = document_num, metric = metric[1]))
 
 
 def general_test(filenames, rankers, document_nums, metrics):
     for ranker in rankers:
         for document_num in document_nums:
-            #if ranker[1] is None:
-            if True:
-                scores = np.zeros((len(filenames), len(metrics)))
-                times = np.zeros(len(filenames))
-                for k in range(len(filenames)):
-                    filename = filenames[k]
-                    p, t = test_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = False)
-                    for i in range(len(metrics)):
-                        scored = np.zeros(p.shape[0])
-                        for j in range(p.shape[0]):
-                            scored[j] = metrics[i][1](p[j])
-                        scores[k][i] = scored.mean()
-                    times[k] = t.mean()
-                print(f'ranker: {ranker[0]}, doc num: {document_num}')
-                times = times.mean()
-                scores = scores.mean(axis = 0)
-                res_str = f'time: {times}'
+            scores = np.zeros((len(filenames), len(metrics)))
+            times = np.zeros(len(filenames))
+            for k in range(len(filenames)):
+                filename = filenames[k]
+                p, t = test_model(filename[1], ranker = ranker[1], document_num = document_num)
                 for i in range(len(metrics)):
-                    res_str += f' {metrics[i][0]}: {scores[i]}'
-                print(res_str)
-            else:
-                for use_dists in [False, True]:
-                    scores = np.zeros((len(filenames), len(metrics)))
-                    times = np.zeros(len(filenames))
-                    for k in range(len(filenames)):
-                        filename = filenames[k]
-                        p, t = test_model(filename[1], ranker = ranker[1], document_num = document_num, use_dists = use_dists)
-                        for i in range(len(metrics)):
-                            scored = np.zeros(p.shape[0])
-                            for j in range(p.shape[0]):
-                                scored[j] = metrics[i][1](p[j])
-                            scores[k][i] = scored.mean()
-                        times[k] = t.mean()
-                    print(f'ranker: {ranker[0]}, doc num: {document_num}, use_dists: {use_dists}')
-                    times = times.mean()
-                    scores = scores.mean(axis = 0)
-                    res_str = f'time: {times}'
-                    for i in range(len(metrics)):
-                        res_str += f' {metrics[i][0]}: {scores[i]}'
-                    print(res_str)
+                    scored = np.zeros(p.shape[0])
+                    for j in range(p.shape[0]):
+                        scored[j] = metrics[i][1](p[j])
+                    scores[k][i] = scored.mean()
+                times[k] = t.mean()
+            print(f'ranker: {ranker[0]}, doc num: {document_num}')
+            times = times.mean()
+            scores = scores.mean(axis = 0)
+            res_str = f'time: {times}'
+            for i in range(len(metrics)):
+                res_str += f' {metrics[i][0]}: {scores[i]}'
+            print(res_str)
 
 if __name__ == '__main__':
     from sys import argv
