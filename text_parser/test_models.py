@@ -236,9 +236,9 @@ def textSearch_with_bm25_ranking(query, pathDB):
 
 
 wikiFilesRootPath = "data/wiki"
-vectorDBPath = 'data/data_bases/vectorDB.index'
-metadataDBPath = "data/data_bases/documentsMetadataDB.db"
-textsCsvPath = "data/data_bases/texts.csv"
+vectorDBPath = 'data/data_bases/monolit/vectorDB.index'
+metadataDBPath = "data/data_bases/monolit/documentsMetadataDB.db"
+textsCsvPath = "data/data_bases/monolit/texts.csv"
 
 import nltk
 from nltk.stem.snowball import SnowballStemmer

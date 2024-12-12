@@ -4,18 +4,18 @@ Search system
 ## Готовые базы данных можно скачать по ссылке: 
 
 Единая большая БД:
-* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1v0C2u1l1vNKOjVtdGc5pG0msd9dTC0EQ/view?usp=sharing
+* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1v0C2u1l1vNKOjVtdGc5pG0msd9dTC0EQ/view?usp=sharing 742414 элемента
 
 Несколько маленьких БД, в которых хранятся те же документы:
-* БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1PnDPgDIhrbA5MMcR4maIKYG5cIDzTcSE/view?usp=sharing 744954 элемента
-* БД с фалами из папок AC, AE, AF: https://drive.google.com/file/d/1IzvYGFhlzuVd9bmEsrGRA2mIWIzHuvBV/view?usp=sharing 744954 элемента
-* БД с фалами из папок AG, AH, AI: https://drive.google.com/file/d/14X2v96_u3ytjwGaje3RUhQX3aMT8LaX8/view?usp=sharing 744954 элемента
-* БД с фалами из папок AJ, AK, AL: https://drive.google.com/file/d/1NUBi3YrZRzgdcOX4tBpX5z1tG-tLH7OL/view?usp=sharing 744954 элемента
-* БД с фалами из папок AM, AN, AO: https://drive.google.com/file/d/1LwfmhxRBfqf-YDg6kilqHaJMkIYChavY/view?usp=sharing 744954 элемента
-* БД с фалами из папок AP, AQ, AR: https://drive.google.com/file/d/1x3kMJbmmqHImcRwZJz-JvswhpTvKzyf8/view?usp=sharing 744954 элемента
-* БД с фалами из папок AS, AT, AU: https://drive.google.com/file/d/10gStaAhQWz3h0HM_AFlYHXsEuIi3zWXu/view?usp=sharing 744954 элемента
-* БД с фалами из папок AW, AV, AX: https://drive.google.com/file/d/1sHd6nMWp-919gNwuXTpwrN2SjdL1yaLl/view?usp=sharing 744954 элемента
-* БД с фалами из папок AY, AZ: https://drive.google.com/file/d/188V9v1-DWiSH6fR01e5bRWkDkTFC27jP/view?usp=sharing 744954 элемента
+* БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1-_NuMrGIoIIqs2XtUZ9qK_4LQL-m6GL0/view?usp=sharing 744954 элемента
+* БД с фалами из папок AC, AE, AF: https://drive.google.com/file/d/1IzvYGFhlzuVd9bmEsrGRA2mIWIzHuvBV/view?usp=sharing 80782 элемента
+* БД с фалами из папок AG, AH, AI: https://drive.google.com/file/d/14X2v96_u3ytjwGaje3RUhQX3aMT8LaX8/view?usp=sharing 101628 элемента
+* БД с фалами из папок AJ, AK, AL: https://drive.google.com/file/d/1NUBi3YrZRzgdcOX4tBpX5z1tG-tLH7OL/view?usp=sharing 98488 элемента
+* БД с фалами из папок AM, AN, AO: https://drive.google.com/file/d/1LwfmhxRBfqf-YDg6kilqHaJMkIYChavY/view?usp=sharing 98653 элемента
+* БД с фалами из папок AP, AQ, AR: https://drive.google.com/file/d/1x3kMJbmmqHImcRwZJz-JvswhpTvKzyf8/view?usp=sharing 95519 элемента
+* БД с фалами из папок AS, AT, AU: https://drive.google.com/file/d/10gStaAhQWz3h0HM_AFlYHXsEuIi3zWXu/view?usp=sharing 83965 элемента
+* БД с фалами из папок AW, AV, AX: https://drive.google.com/file/d/1sHd6nMWp-919gNwuXTpwrN2SjdL1yaLl/view?usp=sharing 45838 элемента
+* БД с фалами из папок AY, AZ: https://drive.google.com/file/d/188V9v1-DWiSH6fR01e5bRWkDkTFC27jP/view?usp=sharing 62592 элемента
 
 Под базами данных имеются ввиду две БД: векторная БД, БД с метаданными.
 Базы данных хранят документы из википедии, а конкретнее, документы разбиваются на блоки в соответствии с оглавлением документов.
