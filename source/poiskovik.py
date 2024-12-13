@@ -132,7 +132,7 @@ class Poiskovik(BaseHTTPRequestHandler):
         urls, docs, fullDocs = urlsAndDocs[0], urlsAndDocs[1], urlsAndDocs[2]
         docs = documents_filter_quorum(query, docs, stem if self.use_stemming else None, self.quorum_threshold)
         self.log_details(f"Кворум посчитан ", startTime)
-        if not docs:
+        if len(docs) == 0:
             return [query, f"Ответ на вопрос {query}: ничего не найдено"]
 
         doc_scores = ranker.rankDocuments(query, docs)
@@ -228,7 +228,7 @@ class Poiskovik(BaseHTTPRequestHandler):
     use_stemming = False
     ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if use_stemming else None)
     # ranker = CrossEncoderRanker()
-    quorum_threshold = 0
+    quorum_threshold = 0.1
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
