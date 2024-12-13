@@ -60,9 +60,14 @@ class Poiskovik(BaseHTTPRequestHandler):
         cursor = connection.cursor()
         subqueries = []
         processed_articles_column = 'stem_article' if self.use_stemming else 'proc_article'
+
+        # Вариант для обработки нескольких запросов обновременно
         for index in indexes:
             subqueries.append(f"SELECT url, {processed_articles_column}, article FROM documents WHERE \"index\" = {index}")
         query = ' UNION ALL '.join(subqueries)
+        # Вариант для обработки одного запроса
+        # indexes_str = ', '.join(str(ind) for ind in indexes)
+        # query = f"SELECT url, {processed_articles_column}, article FROM documents WHERE \"index\" IN ({indexes_str})"
 
         cursor.execute(query)
         return pd.DataFrame(cursor.fetchall())
