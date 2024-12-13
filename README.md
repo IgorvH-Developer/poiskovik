@@ -42,6 +42,7 @@ https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index
 - url
 - title
 - proc_article
+- article
 
 #### texts.csv (старый вариант)
 - id
