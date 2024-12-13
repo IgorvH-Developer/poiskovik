@@ -121,9 +121,10 @@ def calculate_relevance(query: str, document: str, preprocess_func = None) -> fl
         preprocess_func = lambda doc: doc.split()
 
     query_words = set(preprocess_func(query))
-    if not query_words:
+    document_words = set(document.split())
+
+    if len(query_words) == 0:
         return 0.0
-    document_words = set(preprocess_func(document))
     
     intersection = query_words.intersection(document_words)
     relevance = len(intersection) / len(query_words)
