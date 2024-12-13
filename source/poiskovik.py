@@ -91,6 +91,8 @@ class Poiskovik(BaseHTTPRequestHandler):
         return queries, responses
 
     def prepareDocsAndUrlsMonolitDb(self, queries, kDocuments, sqlConnection, indexDb, startTime = None):
+        if len(queries) == 0:
+            return None
         # Поиск в векторной БД для всех вопросов
         indexesForQueries = self.findVectorsIndexes(queries, self.modelEncoder, kDocuments, indexDb)
         if startTime is not None:
@@ -103,7 +105,8 @@ class Poiskovik(BaseHTTPRequestHandler):
         return urlsAndDocs
 
     def prepareDocsAndUrlsShardedDb(self, queries, kDocuments, startTime):
-        urlsAndDocs = []
+        if len(queries) == 0:
+            return None
         docsPerShard = int(kDocuments / self.shards_count)
         results = []
         with ThreadPoolExecutor() as executor:
