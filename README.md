@@ -6,7 +6,7 @@ Search system
 Единая большая БД:
 * БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/10KOKy5whKfhu3y9f0YlWAWLXIXuHH0UR/view?usp=sharing 742414 элемента
 
-Эти БД размещаются в папке ...data_bases/monolit/
+Эти БД размещаются в папке source/text_parser/data/data_bases/monolit/
 
 Несколько маленьких БД, в которых хранятся те же документы:
 * БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1PnDPgDIhrbA5MMcR4maIKYG5cIDzTcSE/view?usp=sharing 744954 элемента
@@ -19,9 +19,9 @@ Search system
 * БД с фалами из папок AW, AV, AX: https://drive.google.com/file/d/1sHd6nMWp-919gNwuXTpwrN2SjdL1yaLl/view?usp=sharing 45838 элемента
 * БД с фалами из папок AY, AZ: https://drive.google.com/file/d/188V9v1-DWiSH6fR01e5bRWkDkTFC27jP/view?usp=sharing 62592 элемента
 
-Эти БД размещаются в папке ...data_bases/sharded/
+Эти БД размещаются в папке source/text_parser/data/data_bases/sharded/
 
-К названию каждой БД нужно добавить приписку например "...data_bases/sharded/..._0.index" с порядковым номером архива. 
+К названию каждой БД нужно добавить приписку например "source/text_parser/data/data_bases/sharded/vectorDB_0.index" с порядковым номером архива. 
 
 Под базами данных имеются ввиду две БД: векторная БД, БД с метаданными.
 Базы данных хранят документы из википедии, а конкретнее, документы разбиваются на блоки в соответствии с оглавлением документов.
