@@ -4,7 +4,7 @@ Search system
 ## Готовые базы данных можно скачать по ссылке: 
 
 Единая большая БД:
-* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/10KOKy5whKfhu3y9f0YlWAWLXIXuHH0UR/view?usp=sharing 742414 элемента
+* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1PeHXNq2tg_c8IRrw15lqrzBfnp9SfZuT/view?usp=sharing 742414 элемента
 
 Эти БД размещаются в папке source/text_parser/data/data_bases/monolit/
 
