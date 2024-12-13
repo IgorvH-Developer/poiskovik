@@ -3,3 +3,4 @@ text_parser/.ipynb_checkpoints
 text_parser/data/relevance_dataset.csv
 .ipynb_checkpoints/
 text_parser/data/data_bases/
+logs/

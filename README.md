@@ -4,7 +4,7 @@ Search system
 ## Готовые базы данных можно скачать по ссылке: 
 
 Единая большая БД:
-* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/1v0C2u1l1vNKOjVtdGc5pG0msd9dTC0EQ/view?usp=sharing 742414 элемента
+* БД с файлами из папок с AA по AZ: https://drive.google.com/file/d/10KOKy5whKfhu3y9f0YlWAWLXIXuHH0UR/view?usp=sharing 742414 элемента
 
 Несколько маленьких БД, в которых хранятся те же документы:
 * БД с фалами из папок AA, AB, AD: https://drive.google.com/file/d/1-_NuMrGIoIIqs2XtUZ9qK_4LQL-m6GL0/view?usp=sharing 744954 элемента

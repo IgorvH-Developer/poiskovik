@@ -117,13 +117,12 @@ def calculate_relevance(query: str, document: str, preprocess_func = None) -> fl
     :param document: текст документа
     :return: значение релевантности от 0 до 1
     """
-    if not query_words:
-        return 0.0
-    
     if preprocess_func is None:
         preprocess_func = lambda doc: doc.split()
 
     query_words = set(preprocess_func(query))
+    if not query_words:
+        return 0.0
     document_words = set(preprocess_func(document))
     
     intersection = query_words.intersection(document_words)
