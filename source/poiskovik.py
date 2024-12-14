@@ -214,11 +214,11 @@ class Poiskovik(BaseHTTPRequestHandler):
     # data_base_type = "sharded"
     shards_count = 9
 
-    vectorDBPathMonolit = "source/text_parser/data/data_bases/monolit/vectorDB.index"
-    vectorDBPathSharded = [f"source/text_parser/data/data_bases/sharded/vectorDB_{shard}.index" for shard in range(shards_count)]
-    # textsCsvPath = f"source/text_parser/data/data_bases/monolit/texts.csv"
-    metadataDBPathMonolit = "source/text_parser/data/data_bases/monolit/documentsMetadataDB.db"
-    metadataDBPathSharded = [f"source/text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
+    vectorDBPathMonolit = "text_parser/data/data_bases/monolit/vectorDB.index"
+    vectorDBPathSharded = [f"text_parser/data/data_bases/sharded/vectorDB_{shard}.index" for shard in range(shards_count)]
+    # textsCsvPath = f"text_parser/data/data_bases/monolit/texts.csv"
+    metadataDBPathMonolit = "text_parser/data/data_bases/monolit/documentsMetadataDB.db"
+    metadataDBPathSharded = [f"text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
     tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
     modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
@@ -231,7 +231,7 @@ class Poiskovik(BaseHTTPRequestHandler):
     use_stemming = False
     ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if use_stemming else None)
     # ranker = CrossEncoderRanker()
-    quorum_threshold = 0.1
+    quorum_threshold = 0.0
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
