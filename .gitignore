@@ -4,3 +4,6 @@ text_parser/data/relevance_dataset.csv
 .ipynb_checkpoints/
 text_parser/data/data_bases/
 logs/
+rankers/__pycache__/
+__pycache__/
+source/text_parser/data/data_bases/

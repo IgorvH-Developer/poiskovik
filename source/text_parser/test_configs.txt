@@ -1,4 +1,0 @@
-mix_1 mix_2 mix_3
-BM25 CrossEncoder
-50 100
-in_top_5 inv_5

@@ -117,6 +117,7 @@ def calculate_relevance(query: str, document: str, preprocess_func = None) -> fl
     :param document: текст документа
     :return: значение релевантности от 0 до 1
     """
+
     if preprocess_func is None:
         preprocess_func = lambda doc: doc.split()
 
