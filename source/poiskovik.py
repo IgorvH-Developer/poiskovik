@@ -10,7 +10,7 @@ from transformers import AutoModelForSeq2SeqLM, T5TokenizerFast
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from rankers.rankers import CrossEncoderRanker, Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum
+from rankers.rankers import BiEncoderRanker, CrossEncoderRanker, Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum
 
 # Настройка логирования
 logging.basicConfig(
@@ -231,6 +231,7 @@ class Poiskovik(BaseHTTPRequestHandler):
     use_stemming = False
     ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if use_stemming else None)
     # ranker = CrossEncoderRanker()
+    # ranker = BiEncoderRanker()
     quorum_threshold = 0.0
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):

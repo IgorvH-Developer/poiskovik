@@ -4,7 +4,7 @@ from typing import List
 import nltk
 from nltk.stem.snowball import SnowballStemmer
 import pymorphy2
-from sentence_transformers import CrossEncoder
+from sentence_transformers import CrossEncoder, SentenceTransformer, util
 from abc import ABC, abstractmethod
 import numpy as np
 
@@ -108,6 +108,17 @@ class CrossEncoderRanker(DocsRanker):
     def rankDocuments(self, query, docs):
         return np.array([self.reranker_model.predict([[query, doc]])[0] for doc in docs])
     
+class BiEncoderRanker(DocsRanker):
+    def __init__(self) -> None:
+        # self.reranker_model = SentenceTransformer('DiTy/bi-encoder-russian-msmarco', device='cuda')
+        self.reranker_model = SentenceTransformer('DiTy/bi-encoder-russian-msmarco', device='cpu')
+
+    def rankDocuments(self, query, docs):
+        sentences = [query] + list(docs)
+        embeddings = self.reranker_model.encode(sentences)
+        results = util.semantic_search(embeddings[0], embeddings[1:], top_k=len(docs))[0]
+        results = np.array([res['score'] for res in results])
+        return results    
 
 def calculate_relevance(query: str, document: str, preprocess_func = None) -> float:
     """
@@ -132,4 +143,4 @@ def calculate_relevance(query: str, document: str, preprocess_func = None) -> fl
     return relevance
 
 def documents_filter_quorum(query: str, documents: List[str], preprocess_func = None, threshold: float = 0.5) -> List[str]:
-    return [doc for doc in documents if calculate_relevance(query, doc, preprocess_func) >= threshold]
+    return [doc for doc in documents if calculate_relevance(query, doc, preprocess_func) > threshold]
