@@ -22,14 +22,21 @@ logging.basicConfig(
 class PoiskovikTest(Poiskovik):
     def __init__(self, request, client_address, server):
         self.use_stemming = True
+        self.quorum_threshold = 0
+        self.partForRanker2 = 0.1
+        self.ranker2 = None
+        self.data_base_type = "monolit"
+        self.isItTest = True
         #super().__init__(request, client_address, server)
         #self.index = self.getVectorDB(self.vectorDBPath)
         #self.use_stemming = True
         # self.ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if self.use_stemming else None)
         #self.ranker = CrossEncoderRanker()
-        #self.quorum_threshold = 0.25
 
     def test(self, filename, ranker = None, kDocuments = 50):
+        self.ranker = ranker
+        self.kDocs = kDocuments
+
         real_urls = []
         queries = []
         with open(filename, encoding='utf-8') as f:
@@ -42,41 +49,18 @@ class PoiskovikTest(Poiskovik):
                 prev_line = line
 
         pos_arr = -np.ones(len(queries))
-        time_arr = np.zeros(len(queries))
-
-        #start_time = time.time()
+        pos_arr_light = -np.ones(len(queries))
 
         for i in range(len(queries)):
-            query = queries[i]
-            
-            start_time = time.time()
-            
-            #indexesForQueries = self.findVectorsIndexes([query], self.modelEncoder, kDocuments)
-
-            # Получение документов и ссылок для всех вопросов
-            if self.data_base_type == "monolit":
-                urlsAndDocs = self.prepareDocsAndUrlsMonolitDb(queries, kDocuments, self.sqlConnectionMonolit, self.indexDbMonolit, start_time)
-            else:
-                self.sqlConnectionMonolit.close()
-                urlsAndDocs = self.prepareDocsAndUrlsShardedDb(queries, kDocuments, start_time)
-
-            urls, docs, fullDocs = urlsAndDocs[0], urlsAndDocs[1], urlsAndDocs[2]
-            docs = documents_filter_quorum(query, docs, stem if self.use_stemming else None, self.quorum_threshold)
-
-            if not ranker is None and len(docs) > 0:
-                doc_scores = ranker.rankDocuments(query, docs)
-                sorted_idx = np.argsort(doc_scores)
-                urls = list(urls.iloc[sorted_idx[::-1]])
-                #resDocs, urls, scores = list(fullDocs.iloc[sorted_idx[::-1]]), list(urls.iloc[sorted_idx[::-1]]), doc_scores[sorted_idx[::-1]]
-            
-            end_time = time.time()
+            urls = self.processQuery(queries[i])
 
             for j in range(len(urls)):
+                if urls[j].split('#')[0] == real_urls[i].split('#')[0] and pos_arr_light[i] == -1:
+                    pos_arr_light[i] = j
                 if urls[j] == real_urls[i]:
                     pos_arr[i] = j
                     break
-            time_arr[i] = end_time - start_time
-        return pos_arr, time_arr
+        return pos_arr, pos_arr_light
 
 def metric_inv(n, coef = 5):
     if n == -1:
@@ -84,36 +68,47 @@ def metric_inv(n, coef = 5):
     else:
         return coef / (n + coef)
 
-def metric_in_top_k(n, k = 5):
-    if -1 < n < k:
-        return 1.0
-    else:
-        return 0.0
+def metric_in_top_5(n):
+    return 1 if -1 < n < 5 else 0
+
+def metric_in_top_15(n):
+    return 1 if -1 < n < 15 else 0
+
+def metric_in_top_30(n):
+    return 1 if -1 < n < 30 else 0
 
 def general_test(filenames, rankers, document_nums, metrics):
     res_str = ''
+    tester = PoiskovikTest(None, None, None)
     for ranker in rankers:
         for kDocuments in document_nums:
-            scores = np.zeros((len(filenames), len(metrics)))
-            times = np.zeros(len(filenames))
+            scoresStrongMatches = np.zeros((len(filenames), len(metrics)))
+            scoresLightMatches = np.zeros((len(filenames), len(metrics)))
             for k in range(len(filenames)):
                 filename = filenames[k]
-                tester = PoiskovikTest(None, None, None)
-                p, t = tester.test(filename[1], ranker = ranker[1], kDocuments = kDocuments)
+                posOfMatches, posOfLightMatches = tester.test(filename[1], ranker = ranker[1], kDocuments = kDocuments)
                 for i in range(len(metrics)):
-                    scored = np.zeros(p.shape[0])
-                    for j in range(p.shape[0]):
-                        scored[j] = metrics[i][1](p[j])
-                    scores[k][i] = scored.mean()
-                times[k] = t.mean()
+                    scoreStrong = np.zeros(posOfMatches.shape[0])
+                    scoreLight = np.zeros(posOfLightMatches.shape[0])
+                    for j in range(posOfMatches.shape[0]):
+                        scoreStrong[j] = metrics[i][1](posOfMatches[j])
+                        scoreLight[j] = metrics[i][1](posOfLightMatches[j])
+                    scoresStrongMatches[k][i] = scoreStrong.mean()
+                    scoresLightMatches[k][i] = scoreLight.mean()
             res_str += f'ranker: {ranker[0]}, kDocuments: {kDocuments}\n'
-            times = times.mean()
-            scores = scores.mean(axis = 0)
-            res_str += f'time: {times}'
+            scoreStrongMean = scoresStrongMatches.mean(axis = 0)
+            scoreLightMean = scoresStrongMatches.mean(axis = 0)
+
+            res_str += 'Strong condition metrics. '
             for i in range(len(metrics)):
-                res_str += f' {metrics[i][0]}: {scores[i]}'
+                res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
+
+            res_str += '\nLight condition metrics. '
+            for i in range(len(metrics)):
+                res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
             res_str += '\n'
     print(res_str)
+    tester.sqlConnectionMonolit.close()
 
 if __name__ == '__main__':
     from sys import argv
@@ -144,5 +139,10 @@ if __name__ == '__main__':
                 if word == 'inv_5':
                     metrics.append([word, metric_inv])
                 if word == 'in_top_5':
-                    metrics.append([word, metric_in_top_k])
+                    metrics.append([word, metric_in_top_5])
+                if word == 'in_top_15':
+                    metrics.append([word, metric_in_top_15])
+                if word == 'in_top_30':
+                    metrics.append([word, metric_in_top_30])
+
         general_test(filenames, rankers, document_nums, metrics)

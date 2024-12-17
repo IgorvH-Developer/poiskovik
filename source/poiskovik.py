@@ -11,11 +11,11 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from rankers.rankers import Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum, CrossEncoderRanker, \
     BiEncoderRanker
-from source.utils import get_rows_from_sql, findVectorsIndexes
+from utils import get_rows_from_sql, findVectorsIndexes
 
 # Настройка логирования
 logging.basicConfig(
-    filename='logs/queries.log', filemode='a', level=logging.WARNING, format='%(message)s'
+    filename='../logs/queries.log', filemode='a', level=logging.WARNING, format='%(message)s'
 )
 
 
@@ -59,7 +59,7 @@ class Poiskovik(BaseHTTPRequestHandler):
             queries.append(question)
         return queries, responses
 
-    def prepareDocsAndUrlsMonolitDb(self, queries, kDocuments, sqlConnection, indexDb):
+    def prepareDocsAndUrlsMonolitDb(self, queries, kDocuments, sqlConnection, indexDb, redundantParam = None):
         if len(queries) == 0:
             return None
 
@@ -113,14 +113,14 @@ class Poiskovik(BaseHTTPRequestHandler):
         docs = documents_filter_quorum(query, docs, stem if self.useStemming else None, self.quorum_threshold)
         self.logDetails(f"кворум {len(docs) }", startTime)
         if len(docs) == 0:
-            return [query, f"Ответ на вопрос {query}: ничего не найдено"]
+            return query, f"Ответ на вопрос {query}: ничего не найдено", list()
 
         startTime = time.time()
         resDocs, resFullDocs, resUrls = self.rankDocs(query, docs, fullDocs, urls, ranker)
         self.logDetails(f"ранжирование ", startTime)
 
-        if ranker2 is not None and int(len(resDocs)*self.ranker2Part) + 1 > 1:
-            rank2DocCount = int(len(resDocs)*self.ranker2Part) + 1
+        if ranker2 is not None and int(len(resDocs)*self.partForRanker2) + 1 > 1:
+            rank2DocCount = int(len(resDocs)*self.partForRanker2) + 1
             startTime = time.time()
             resDocs, resFullDocs, resUrls = self.rankDocs(query, resDocs[:rank2DocCount], resFullDocs[:rank2DocCount], resUrls[:rank2DocCount], ranker2)
             self.logDetails(f"ранжирование_2 ", startTime)
@@ -132,7 +132,7 @@ class Poiskovik(BaseHTTPRequestHandler):
         self.logDetails(f"суммаризация ", startTime)
 
         response_message = f"Ответ на вопрос {query}: {summary} \n\n" + '\n'.join(resUrls)
-        return [query, response_message]
+        return query, response_message, resUrls
 
     def sendResponse(self, responses):
         response_message = "\n\n".join(responses)
@@ -142,32 +142,34 @@ class Poiskovik(BaseHTTPRequestHandler):
         self.wfile.write(response_message.encode('utf-8'))
 
     def processQuery(self, allQueries):
-        kDocuments = 500
-        startTime = time.time()
-
         queries, responses = self.splitAllQueries(allQueries)
         # self.logDetails(f"Для обработки получено вопросов {len(queries)}")
 
         if self.data_base_type == "monolit":
-            urlsAndDocs = self.prepareDocsAndUrlsMonolitDb(queries, kDocuments, self.sqlConnectionMonolit, self.indexDbMonolit)
+            urlsAndDocs = self.prepareDocsAndUrlsMonolitDb(queries, self.kDocs, self.sqlConnectionMonolit, self.indexDbMonolit)
         else:
             self.sqlConnectionMonolit.close()
-            urlsAndDocs = self.prepareDocsAndUrlsShardedDb(queries, kDocuments)
+            urlsAndDocs = self.prepareDocsAndUrlsShardedDb(queries, self.kDocs)
 
         # Параллельное ранжирование и суммаризация для каждого вопроса
+        resUrls = []
         with ThreadPoolExecutor() as executor:
             processed_queries = {
-                executor.submit(self.rankAndSummarize, query, urlsAndDocs[idxStart:idxStart+kDocuments], self.ranker, self.ranker2): (query, idxStart)
-                for query, idxStart in zip(queries, range(0, kDocuments*len(queries), kDocuments))
+                executor.submit(self.rankAndSummarize, query, urlsAndDocs[idxStart:idxStart+self.kDocs], self.ranker, self.ranker2): (query, idxStart)
+                for query, idxStart in zip(queries, range(0, self.kDocs*len(queries), self.kDocs))
             }
             for proc_query in processed_queries:
-                question = proc_query.result()[0]
                 response = proc_query.result()[1]
+                urls = proc_query.result()[2]
                 responses.append(response)
+                resUrls.extend(urls)
                 # self.query_history[question] = "Сохранённый ответ.\n" + response
 
         # self.logDetails(f"Вопросов {len(queries)} обработано за ", startTime)
-        self.sendResponse(responses)
+        if self.isItTest:
+            return resUrls
+        else:
+            self.sendResponse(responses)
 
     def do_GET(self):
         # Получаем вопрос из url
@@ -194,19 +196,19 @@ class Poiskovik(BaseHTTPRequestHandler):
     # data_base_type = "sharded"
     shards_count = 9
 
-    vectorDBPathMonolit = "source/text_parser/data/data_bases/monolit/vectorDB.index"
-    vectorDBPathSharded = [f"source/text_parser/data/data_bases/sharded/vectorDB_{shard}.index" for shard in range(shards_count)]
+    vectorDBPathMonolit = "text_parser/data/data_bases/monolit/vectorDB.index"
+    vectorDBPathSharded = [f"text_parser/data/data_bases/sharded/vectorDB_{shard}.index" for shard in range(shards_count)]
     # textsCsvPath = f"text_parser/data/data_bases/monolit/texts.csv"
-    metadataDBPathMonolit = "source/text_parser/data/data_bases/monolit/documentsMetadataDB.db"
-    metadataDBPathSharded = [f"source/text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
+    metadataDBPathMonolit = "text_parser/data/data_bases/monolit/documentsMetadataDB.db"
+    metadataDBPathSharded = [f"text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
     tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
     modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
 
     sqlConnectionMonolit = sqlite3.connect(metadataDBPathMonolit, check_same_thread=False)
-    sqlConnectionSharded = [sqlite3.connect(path, check_same_thread=False) for path in metadataDBPathSharded]
+    # sqlConnectionSharded = [sqlite3.connect(path, check_same_thread=False) for path in metadataDBPathSharded]
     indexDbMonolit = faiss.read_index(vectorDBPathMonolit)
-    indexDbSharded = [faiss.read_index(path) for path in vectorDBPathSharded]
+    # indexDbSharded = [faiss.read_index(path) for path in vectorDBPathSharded]
 
     queryHistory = dict()
     useStemming = True
@@ -217,8 +219,9 @@ class Poiskovik(BaseHTTPRequestHandler):
     # ranker2 = CrossEncoderRanker()
     ranker2 = BiEncoderRanker()
     # ranker2 = None
-    ranker2Part = 0.1
+    partForRanker2 = 0.1
     quorum_threshold = 0.0
+    kDocs = 500
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
