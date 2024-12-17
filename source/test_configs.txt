@@ -1,4 +1,7 @@
-mix_1 mix_2 mix_3
-BM25
-400
-in_top_5 in_top_15 in_top_30 inv_5
+mix_1 mix_2 mix_3 // datasets
+None BM25 // ranker
+None BiEncoder CrossEncoder // ranker2
+0 0.1 0.25 0.5 // treshhold
+0.1 0.25 0.5 // to_rerank_frac
+50 400 700 // doc num
+in_top_5 in_top_15 in_top_30 inv_5 // metrics

@@ -77,36 +77,42 @@ def metric_in_top_15(n):
 def metric_in_top_30(n):
     return 1 if -1 < n < 30 else 0
 
-def general_test(filenames, rankers, document_nums, metrics):
+def general_test(filenames, rankers, rankers2, treshholds, to_rerank_fracs, document_nums, metrics):
     res_str = ''
     tester = PoiskovikTest(None, None, None)
-    for ranker in rankers:
-        for kDocuments in document_nums:
-            scoresStrongMatches = np.zeros((len(filenames), len(metrics)))
-            scoresLightMatches = np.zeros((len(filenames), len(metrics)))
-            for k in range(len(filenames)):
-                filename = filenames[k]
-                posOfMatches, posOfLightMatches = tester.test(filename[1], ranker = ranker[1], kDocuments = kDocuments)
-                for i in range(len(metrics)):
-                    scoreStrong = np.zeros(posOfMatches.shape[0])
-                    scoreLight = np.zeros(posOfLightMatches.shape[0])
-                    for j in range(posOfMatches.shape[0]):
-                        scoreStrong[j] = metrics[i][1](posOfMatches[j])
-                        scoreLight[j] = metrics[i][1](posOfLightMatches[j])
-                    scoresStrongMatches[k][i] = scoreStrong.mean()
-                    scoresLightMatches[k][i] = scoreLight.mean()
-            res_str += f'ranker: {ranker[0]}, kDocuments: {kDocuments}\n'
-            scoreStrongMean = scoresStrongMatches.mean(axis = 0)
-            scoreLightMean = scoresStrongMatches.mean(axis = 0)
+    for ranker2 in rankers2:
+        tester.ranker2 = ranker2[1]
+        for treshhold in treshholds:
+            tester.quorum_threshold = treshhold
+            for to_rerank_frac in to_rerank_fracs:
+                tester.partForRanker2 = to_rerank_frac
+                for ranker in rankers:
+                    for kDocuments in document_nums:
+                        scoresStrongMatches = np.zeros((len(filenames), len(metrics)))
+                        scoresLightMatches = np.zeros((len(filenames), len(metrics)))
+                        for k in range(len(filenames)):
+                            filename = filenames[k]
+                            posOfMatches, posOfLightMatches = tester.test(filename[1], ranker = ranker[1], kDocuments = kDocuments)
+                            for i in range(len(metrics)):
+                                scoreStrong = np.zeros(posOfMatches.shape[0])
+                                scoreLight = np.zeros(posOfLightMatches.shape[0])
+                                for j in range(posOfMatches.shape[0]):
+                                    scoreStrong[j] = metrics[i][1](posOfMatches[j])
+                                    scoreLight[j] = metrics[i][1](posOfLightMatches[j])
+                                scoresStrongMatches[k][i] = scoreStrong.mean()
+                                scoresLightMatches[k][i] = scoreLight.mean()
+                        res_str += f'ranker: {ranker[0]}, ranker2: {ranker2[0]}, treshold: {treshhold}, part for r2: {to_rerank_frac}, kDocuments: {kDocuments}\n'
+                        scoreStrongMean = scoresStrongMatches.mean(axis = 0)
+                        scoreLightMean = scoresStrongMatches.mean(axis = 0)
 
-            res_str += 'Strong condition metrics. '
-            for i in range(len(metrics)):
-                res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
+                        res_str += 'Strong condition metrics. '
+                        for i in range(len(metrics)):
+                            res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
 
-            res_str += '\nLight condition metrics. '
-            for i in range(len(metrics)):
-                res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
-            res_str += '\n'
+                        res_str += '\nLight condition metrics. '
+                        for i in range(len(metrics)):
+                            res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
+                        res_str += '\n'
     print(res_str)
     tester.sqlConnectionMonolit.close()
 
@@ -116,6 +122,9 @@ if __name__ == '__main__':
     if len(argv) == 2:
         filenames = []
         rankers = []
+        rankers2 = []
+        treshholds = []
+        to_rerank_fracs = []
         document_nums = []
         metrics = []
         with open(argv[1], encoding='utf-8') as f:
@@ -123,6 +132,8 @@ if __name__ == '__main__':
             for line in f:
                 lines.append(line)
             for word in lines[0][:-1].split(' '):
+                if word == '#' or word == '//':
+                    break
                 filenames.append([word, 'text_parser/data/queries_split/' + word + '.txt'])
             for word in lines[1][:-1].split(' '):
                 if word == 'None':
@@ -133,9 +144,32 @@ if __name__ == '__main__':
                     rankers.append([word, CrossEncoderRanker()])
                 if word == 'BiEncoder':
                     rankers.append([word, BiEncoderRanker()])
+                if word == '#' or word == '//':
+                    break
             for word in lines[2][:-1].split(' '):
-                document_nums.append(int(word))
+                if word == 'None':
+                    rankers2.append([word, None])
+                if word == 'BM25':
+                    rankers2.append([word, Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem)])
+                if word == 'CrossEncoder':
+                    rankers2.append([word, CrossEncoderRanker()])
+                if word == 'BiEncoder':
+                    rankers2.append([word, BiEncoderRanker()])
+                if word == '#' or word == '//':
+                    break
             for word in lines[3][:-1].split(' '):
+                if word == '#' or word == '//':
+                    break
+                treshholds.append(float(word))
+            for word in lines[4][:-1].split(' '):
+                if word == '#' or word == '//':
+                    break
+                to_rerank_fracs.append(float(word))
+            for word in lines[5][:-1].split(' '):
+                if word == '#' or word == '//':
+                    break
+                document_nums.append(int(word))
+            for word in lines[6][:-1].split(' '):
                 if word == 'inv_5':
                     metrics.append([word, metric_inv])
                 if word == 'in_top_5':
@@ -144,5 +178,7 @@ if __name__ == '__main__':
                     metrics.append([word, metric_in_top_15])
                 if word == 'in_top_30':
                     metrics.append([word, metric_in_top_30])
+                if word == '#' or word == '//':
+                    break
 
-        general_test(filenames, rankers, document_nums, metrics)
+        general_test(filenames, rankers, rankers2, treshholds, to_rerank_fracs, document_nums, metrics)
