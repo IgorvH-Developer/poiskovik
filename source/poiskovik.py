@@ -107,7 +107,7 @@ class Poiskovik(BaseHTTPRequestHandler):
         resDocs, resFullDocs, resUrls = list(np.array(docs)[sorted_idx[::-1]]), fullDocs.iloc[sorted_idx[::-1]], urls.iloc[sorted_idx[::-1]]
         return resDocs, resFullDocs, resUrls
 
-    def rankAndSummarize(self, query, urlsAndDocs: pd.DataFrame, ranker, ranker2 = None):
+    def rankAndSummarize(self, query, urlsAndDocs: pd.DataFrame, ranker = None, ranker2 = None):
         startTime = time.time()
         urls, docs, fullDocs = urlsAndDocs[0], urlsAndDocs[1], urlsAndDocs[2]
         docs = documents_filter_quorum(query, docs, stem if self.useStemming else None, self.quorum_threshold)
@@ -115,9 +115,11 @@ class Poiskovik(BaseHTTPRequestHandler):
         if len(docs) == 0:
             return query, f"Ответ на вопрос {query}: ничего не найдено", list()
 
-        startTime = time.time()
-        resDocs, resFullDocs, resUrls = self.rankDocs(query, docs, fullDocs, urls, ranker)
-        self.logDetails(f"ранжирование ", startTime)
+        resDocs, resFullDocs, resUrls = docs, fullDocs, urls
+        if ranker is not None:
+            startTime = time.time()
+            resDocs, resFullDocs, resUrls = self.rankDocs(query, docs, fullDocs, urls, ranker)
+            self.logDetails(f"ранжирование ", startTime)
 
         if ranker2 is not None and int(len(resDocs)*self.partForRanker2) + 1 > 1:
             rank2DocCount = int(len(resDocs)*self.partForRanker2) + 1
