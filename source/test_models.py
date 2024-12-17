@@ -10,7 +10,8 @@ from transformers import AutoModelForSeq2SeqLM, T5TokenizerFast
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from rankers.rankers import CrossEncoderRanker, Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum
+from rankers.rankers import CrossEncoderRanker, Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum, \
+    BiEncoderRanker
 from poiskovik import Poiskovik
 
 # Настройка логирования
@@ -20,7 +21,7 @@ logging.basicConfig(
 
 class PoiskovikTest(Poiskovik):
     def __init__(self, request, client_address, server):
-        pass
+        self.use_stemming = True
         #super().__init__(request, client_address, server)
         #self.index = self.getVectorDB(self.vectorDBPath)
         #self.use_stemming = True
@@ -135,6 +136,8 @@ if __name__ == '__main__':
                     rankers.append([word, Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem)])
                 if word == 'CrossEncoder':
                     rankers.append([word, CrossEncoderRanker()])
+                if word == 'BiEncoder':
+                    rankers.append([word, BiEncoderRanker()])
             for word in lines[2][:-1].split(' '):
                 document_nums.append(int(word))
             for word in lines[3][:-1].split(' '):
