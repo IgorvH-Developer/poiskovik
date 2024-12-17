@@ -5,7 +5,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from urllib.parse import unquote
 import sqlite3
-from transformers import AutoModelForSeq2SeqLM, T5TokenizerFast
+from transformers import T5ForConditionalGeneration, T5TokenizerFast
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -32,7 +32,7 @@ class Poiskovik(BaseHTTPRequestHandler):
         logging.warning(f"{text} {processing_time:.2f}.")
 
     def summarizeText(self, docs, query=None):
-        max_input = 1512
+        max_input = 512
         task_prefix = "Find answer on question: "
         input_seq = ""
         if query != None:
@@ -41,13 +41,12 @@ class Poiskovik(BaseHTTPRequestHandler):
         input_seq = [input_seq]
         encoded = self.tokenizer(
             [task_prefix + sequence for sequence in input_seq],
-            padding="longest",
             max_length=max_input,
             truncation=True,
             return_tensors="pt",
         )
-        predicts = self.modelSummarizer.generate(encoded['input_ids'])  # # Прогнозирование
-        return self.tokenizer.batch_decode(predicts, skip_special_tokens=True)  # Декодируем данные
+        predicts = self.modelSummarizer.generate(encoded['input_ids'])
+        return self.tokenizer.batch_decode(predicts, skip_special_tokens=True)
 
     def splitAllQueries(self, allQueries):
         queries = []
@@ -202,8 +201,8 @@ class Poiskovik(BaseHTTPRequestHandler):
     metadataDBPathMonolit = "text_parser/data/data_bases/monolit/documentsMetadataDB.db"
     metadataDBPathSharded = [f"text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-    tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
-    modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
+    tokenizer = T5TokenizerFast.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
+    modelSummarizer = T5ForConditionalGeneration.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
 
     sqlConnectionMonolit = sqlite3.connect(metadataDBPathMonolit, check_same_thread=False)
     # sqlConnectionSharded = [sqlite3.connect(path, check_same_thread=False) for path in metadataDBPathSharded]
