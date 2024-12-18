@@ -127,7 +127,7 @@ class Poiskovik(BaseHTTPRequestHandler):
             resDocs, resFullDocs, resUrls = self.rankDocs(query, resDocs[:rank2DocCount], resFullDocs[:rank2DocCount], resUrls[:rank2DocCount], ranker2)
             self.logDetails(f"ранжирование_2 ", startTime)
 
-        resFullDocs, resUrls = list(resFullDocs), list(resUrls)
+        resFullDocs, resUrls = list(resFullDocs), list(resUrls)[:len(resDocs)]
         startTime = time.time()
         summarizeCount = 5
         summary = self.summarizeText(resFullDocs[:summarizeCount], query)
@@ -215,15 +215,16 @@ class Poiskovik(BaseHTTPRequestHandler):
     queryHistory = dict()
     useStemming = True
     isItTest = False
-    ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if useStemming else None)
+    ranker = None
+    # ranker = Bm25Ranker(bm25_alg = BM25WithProximity, preprocess_func = stem if useStemming else None)
     # ranker = CrossEncoderRanker()
     # ranker = BiEncoderRanker()
     # ranker2 = CrossEncoderRanker()
-    ranker2 = BiEncoderRanker()
-    # ranker2 = None
+    # ranker2 = BiEncoderRanker()
+    ranker2 = None
     partForRanker2 = 0.1
     quorum_threshold = 0.0
-    kDocs = 500
+    kDocs = 1000
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)

@@ -103,16 +103,16 @@ def general_test(filenames, rankers, rankers2, treshholds, to_rerank_fracs, docu
                                 scoresLightMatches[k][i] = scoreLight.mean()
                         res_str += f'ranker: {ranker[0]}, ranker2: {ranker2[0]}, treshold: {treshhold}, part for r2: {to_rerank_frac}, kDocuments: {kDocuments}\n'
                         scoreStrongMean = scoresStrongMatches.mean(axis = 0)
-                        scoreLightMean = scoresStrongMatches.mean(axis = 0)
+                        scoreLightMean = scoresLightMatches.mean(axis = 0)
 
-                        res_str += 'Strong condition metrics. '
-                        for i in range(len(metrics)):
-                            res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
+                    res_str += 'Strong condition metrics. '
+                    for i in range(len(metrics)):
+                        res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
 
-                        res_str += '\nLight condition metrics. '
-                        for i in range(len(metrics)):
-                            res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
-                        res_str += '\n'
+                    res_str += '\nLight condition metrics. '
+                    for i in range(len(metrics)):
+                        res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
+                    res_str += '\n'
     print(res_str)
     tester.sqlConnectionMonolit.close()
 
@@ -128,7 +128,6 @@ if __name__ == '__main__':
         document_nums = []
         metrics = []
         with open(argv[1], encoding='utf-8') as f:
-            lines = []
             for line in f:
                 lines.append(line)
             for word in lines[0][:-1].split(' '):

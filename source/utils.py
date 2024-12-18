@@ -7,16 +7,21 @@ def get_rows_from_sql(indexes, connection, useStemming):
     subqueries = []
     processed_articles_column = 'stem_article' if useStemming else 'proc_article'
 
-    # # Вариант для обработки нескольких запросов обновременно
+    # Вариант для обработки нескольких запросов обновременно
     for index in indexes:
         subqueries.append(f"SELECT url, {processed_articles_column}, article FROM documents WHERE \"index\" = {index}")
     queries = [' UNION ALL '.join(subqueries[i:i + 400]) for i in range(0, len(subqueries), 400)]
 
-    resultDataFrames = []
+    res = list()
     for query in queries:
         cursor.execute(query)
-        resultDataFrames.append(pd.DataFrame(cursor.fetchall()))
-    return pd.concat(resultDataFrames)
+        res.extend(cursor.fetchall())
+    return pd.DataFrame(res)
+
+    # indexes_str = ', '.join(str(ind) for ind in indexes)
+    # query = f"SELECT url, {processed_articles_column}, article FROM documents WHERE \"index\" IN ({indexes_str})"
+    # cursor.execute(query)
+    # return pd.DataFrame(cursor.fetchall())
 
 
 def getVectorDB(path):
