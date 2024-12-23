@@ -22,7 +22,7 @@ logging.basicConfig(
 class PoiskovikTest(Poiskovik):
     def __init__(self, request, client_address, server):
         self.use_stemming = True
-        self.quorum_threshold = 0
+        self.quorum_threshold = -1
         self.partForRanker2 = 0.1
         self.ranker2 = None
         self.data_base_type = "monolit"
@@ -128,6 +128,7 @@ if __name__ == '__main__':
         document_nums = []
         metrics = []
         with open(argv[1], encoding='utf-8') as f:
+            lines = []
             for line in f:
                 lines.append(line)
             for word in lines[0][:-1].split(' '):

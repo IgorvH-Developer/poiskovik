@@ -21,6 +21,11 @@ Search system
 
 Эти БД размещаются в папке source/text_parser/data/data_bases/sharded/
 
+Текстовая БД с обратным индексом
+* https://drive.google.com/file/d/1nknqONLMd2A4aHjs6L8NThWDcIeO_t0o/view?usp=sharing
+
+БД размещается в папке source/text_parser/data/data_bases/
+
 К названию каждой БД нужно добавить приписку например "text_parser/data/data_bases/sharded/vectorDB_0.index" с порядковым номером архива. 
 
 Под базами данных имеются ввиду две БД: векторная БД, БД с метаданными.
@@ -28,12 +33,16 @@ Search system
 Каждый блок хранится в виде вектрора в вектрной БД и в виде метаданных во второй БД.
 
 
-### Векторная БД - vectorDB.index
+### Векторная БД с обратным индексом - vectorDB.index
 - Вектор блока текста
 - Индекс вектора
 
 #### Принципы выбора индекса
 https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index
+
+### Текстовая БД с обратным индексом
+- Блок текста
+- Индекс документа
 
 ### БД с метаданными 
 

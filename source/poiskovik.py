@@ -5,13 +5,14 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from urllib.parse import unquote
 import sqlite3
-from transformers import T5ForConditionalGeneration, T5TokenizerFast
+from transformers import AutoModelForSeq2SeqLM, T5ForConditionalGeneration, T5TokenizerFast
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from rankers.rankers import Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum, CrossEncoderRanker, \
     BiEncoderRanker
-from utils import get_rows_from_sql, findVectorsIndexes
+from utils import get_rows_from_sql, findVectorsIndexes, findDocIndexesByTextSearch
+from whoosh.index import open_dir
 
 # Настройка логирования
 logging.basicConfig(
@@ -58,19 +59,61 @@ class Poiskovik(BaseHTTPRequestHandler):
             queries.append(question)
         return queries, responses
 
+    def combineVectorAndTextIndexes(self, vectIdxs, vectorScores, textIdxs, textScores):
+        # 1 способ комбинирования
+        # if len(vectIdxs) < len(textIdxs):
+        #     combinedIdx[list(range(0, len(vectIdxs)*2, 2))] = vectIdxs
+        #     combinedIdx[list(range(1, len(vectIdxs)*2, 2))] = textIdxs[:len(vectIdxs)]
+        #     combinedIdx[len(vectIdxs)*2:] = textIdxs[len(vectIdxs):]
+        # else:
+        #     combinedIdx[list(range(0, len(textIdxs) * 2, 2))] = vectIdxs[:len(textIdxs)]
+        #     combinedIdx[list(range(1, len(textIdxs) * 2 + 1, 2))] = textIdxs
+        #     combinedIdx[len(textIdxs) * 2:] = vectIdxs[len(textIdxs):]
+        # return combinedIdx
+
+        # 2 способ комбинирования
+        bm25Max = 45
+        textScoresNorm = textScores / bm25Max
+        index_weights = {}
+        for i in range(max(len(vectIdxs), len(textIdxs))):
+            if i < len(vectIdxs):
+                if vectIdxs[i] not in index_weights:
+                    index_weights[vectIdxs[i]] = vectorScores[i]
+                else:
+                    index_weights[vectIdxs[i]] += vectorScores[i]
+            if i < len(textIdxs):
+                if textIdxs[i] not in index_weights:
+                    index_weights[textIdxs[i]] = textScoresNorm[i]
+                else:
+                    index_weights[textIdxs[i]] += textScoresNorm[i]
+
+        resIdxs = np.array(list(index_weights.keys()))
+        resScores = np.array(list(index_weights.values()))
+        sortedScores = np.argsort(resScores)
+
+        return resIdxs[sortedScores[::-1]]
+
+
     def prepareDocsAndUrlsMonolitDb(self, queries, kDocuments, sqlConnection, indexDb, redundantParam = None):
         if len(queries) == 0:
             return None
 
         startTime = time.time()
-        indexesForQueries = findVectorsIndexes(queries, self.modelEncoder, kDocuments, indexDb)
+        vectorIdxsForQueries, vectorScores = findVectorsIndexes(queries, self.modelEncoder, kDocuments, indexDb) # Поиск обратным индексом в векторной БД
+        self.logDetails(f"векторный_обратный_индекс ", startTime)
+        startTime = time.time()
+        textIdxsAndScoresForQueries, minScore, maxScore = findDocIndexesByTextSearch(queries, self.textDB, 2) # Поиск обратным индексом в текстовой БД
+        if len(textIdxsAndScoresForQueries) == 0:
+            return None
+        combinedIndexes = self.combineVectorAndTextIndexes(vectorIdxsForQueries, vectorScores, textIdxsAndScoresForQueries[:,0], textIdxsAndScoresForQueries[:, 1])
         if self.data_base_type == "monolit":
-            self.logDetails(f"векторная_бд ", startTime)
+            self.logDetails(f"текстовый_обратный_индекс ", startTime)
+            self.logDetails(f"scores {minScore} {maxScore}", startTime)
 
         startTime = time.time()
-        urlsAndDocs = get_rows_from_sql(indexesForQueries.flatten(), sqlConnection, self.useStemming).fillna('stub')
+        urlsAndDocs = get_rows_from_sql(combinedIndexes, sqlConnection, self.useStemming).fillna('stub')
         if self.data_base_type == "monolit":
-            self.logDetails(f"текстовая_бд ", startTime)
+            self.logDetails(f"бд_с_метаданными ", startTime)
         return urlsAndDocs
 
     def prepareDocsAndUrlsShardedDb(self, queries, kDocuments):
@@ -151,6 +194,8 @@ class Poiskovik(BaseHTTPRequestHandler):
         else:
             self.sqlConnectionMonolit.close()
             urlsAndDocs = self.prepareDocsAndUrlsShardedDb(queries, self.kDocs)
+        if urlsAndDocs is None:
+            return [] if self.isItTest else self.sendResponse(["Ничего не нашло"])
 
         # Параллельное ранжирование и суммаризация для каждого вопроса
         resUrls = []
@@ -199,12 +244,14 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     vectorDBPathMonolit = "text_parser/data/data_bases/monolit/vectorDB.index"
     vectorDBPathSharded = [f"text_parser/data/data_bases/sharded/vectorDB_{shard}.index" for shard in range(shards_count)]
-    # textsCsvPath = f"text_parser/data/data_bases/monolit/texts.csv"
+    textDB = open_dir("text_parser/data/data_bases/text_index")
     metadataDBPathMonolit = "text_parser/data/data_bases/monolit/documentsMetadataDB.db"
     metadataDBPathSharded = [f"text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-    tokenizer = T5TokenizerFast.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
-    modelSummarizer = T5ForConditionalGeneration.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
+    # tokenizer = T5TokenizerFast.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
+    # modelSummarizer = T5ForConditionalGeneration.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
+    tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
+    modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
 
     sqlConnectionMonolit = sqlite3.connect(metadataDBPathMonolit, check_same_thread=False)
     # sqlConnectionSharded = [sqlite3.connect(path, check_same_thread=False) for path in metadataDBPathSharded]
