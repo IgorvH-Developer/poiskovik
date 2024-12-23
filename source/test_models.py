@@ -11,7 +11,7 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from rankers.rankers import CrossEncoderRanker, Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum, \
-    BiEncoderRanker
+    BiEncoderRanker, QuorumRanker
 from poiskovik import Poiskovik
 
 # Настройка логирования
@@ -27,6 +27,7 @@ class PoiskovikTest(Poiskovik):
         self.ranker2 = None
         self.data_base_type = "monolit"
         self.isItTest = True
+        self.noSummarize = True
         #super().__init__(request, client_address, server)
         #self.index = self.getVectorDB(self.vectorDBPath)
         #self.use_stemming = True
@@ -105,15 +106,15 @@ def general_test(filenames, rankers, rankers2, treshholds, to_rerank_fracs, docu
                         scoreStrongMean = scoresStrongMatches.mean(axis = 0)
                         scoreLightMean = scoresLightMatches.mean(axis = 0)
 
-                    res_str += 'Strong condition metrics. '
-                    for i in range(len(metrics)):
-                        res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
+                        res_str += 'Strong condition metrics. '
+                        for i in range(len(metrics)):
+                            res_str += f' {metrics[i][0]}: {scoreStrongMean[i]}'
 
-                    res_str += '\nLight condition metrics. '
-                    for i in range(len(metrics)):
-                        res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
-                    res_str += '\n'
-    print(res_str)
+                        res_str += '\nLight condition metrics. '
+                        for i in range(len(metrics)):
+                            res_str += f' {metrics[i][0]}: {scoreLightMean[i]}'
+                        print(res_str)
+                        res_str = ''
     tester.sqlConnectionMonolit.close()
 
 if __name__ == '__main__':
@@ -144,6 +145,8 @@ if __name__ == '__main__':
                     rankers.append([word, CrossEncoderRanker()])
                 if word == 'BiEncoder':
                     rankers.append([word, BiEncoderRanker()])
+                if word == 'Quorum':
+                    rankers.append([word, QuorumRanker()])
                 if word == '#' or word == '//':
                     break
             for word in lines[2][:-1].split(' '):
@@ -155,6 +158,8 @@ if __name__ == '__main__':
                     rankers2.append([word, CrossEncoderRanker()])
                 if word == 'BiEncoder':
                     rankers2.append([word, BiEncoderRanker()])
+                if word == 'Quorum':
+                    rankers2.append([word, QuorumRanker()])
                 if word == '#' or word == '//':
                     break
             for word in lines[3][:-1].split(' '):

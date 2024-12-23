@@ -1,0 +1,66 @@
+Only vec
+
+ranker: None, ranker2: None, treshold: 0.0, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.0, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.01, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.01, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.02, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.02, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.03, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.03, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.04, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.04, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.05, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.05, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.06, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.06, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.07, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.07, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.08, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.08, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2564102564102564 in_top_30: 0.2820512820512821 inv_5: 0.18534789763238038
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.28205128205128205 in_top_30: 0.3076923076923077 inv_5: 0.2380544503389331
+ranker: None, ranker2: None, treshold: 0.09, part for r2: 1.0, kDocuments: 20
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.23076923076923075 in_top_30: 0.2435897435897436 inv_5: 0.17485754985754987
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2564102564102564 in_top_30: 0.2692307692307692 inv_5: 0.22756410256410256
+ranker: None, ranker2: None, treshold: 0.09, part for r2: 1.0, kDocuments: 50
+Strong condition metrics.  in_top_5: 0.16666666666666666 in_top_15: 0.2435897435897436 in_top_30: 0.2564102564102564 inv_5: 0.17913105413105415
+Light condition metrics.  in_top_5: 0.2435897435897436 in_top_15: 0.2692307692307692 in_top_30: 0.28205128205128205 inv_5: 0.23183760683760687
+
+vec + text
+
+
