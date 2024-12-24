@@ -7,3 +7,4 @@ logs/
 rankers/__pycache__/
 __pycache__/
 source/text_parser/data/data_bases/
+text_parser/data/df_table.csv

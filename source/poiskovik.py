@@ -11,7 +11,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from rankers.rankers import Bm25Ranker, BM25WithProximity, stem, documents_filter_quorum, CrossEncoderRanker, \
     BiEncoderRanker
-from utils import get_rows_from_sql, findVectorsIndexes, findDocIndexesByTextSearch
+from utils import get_rows_from_sql, findVectorsIndexes, findDocIndexesByTextSearch, clean_string
 from whoosh.index import open_dir
 
 # Настройка логирования
@@ -23,6 +23,7 @@ logging.basicConfig(
 class Poiskovik(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         super().__init__(request, client_address, server)
+        self.noSummarize = False
 
     def logDetails(self, text):
         logging.warning(f"{text}")
@@ -94,7 +95,6 @@ class Poiskovik(BaseHTTPRequestHandler):
 
         return resIdxs[sortedScores[::-1]]
 
-
     def prepareDocsAndUrlsMonolitDb(self, queries, kDocuments, sqlConnection, indexDb, redundantParam = None):
         if len(queries) == 0:
             return None
@@ -113,6 +113,7 @@ class Poiskovik(BaseHTTPRequestHandler):
 
         startTime = time.time()
         urlsAndDocs = get_rows_from_sql(combinedIndexes, sqlConnection, self.useStemming).fillna('stub')
+        #urlsAndDocs = get_rows_from_sql(vectorIdxsForQueries, sqlConnection, self.useStemming).fillna('stub')
         if self.data_base_type == "monolit":
             self.logDetails(f"бд_с_метаданными ", startTime)
         return urlsAndDocs
@@ -161,20 +162,23 @@ class Poiskovik(BaseHTTPRequestHandler):
         resDocs, resFullDocs, resUrls = docs, fullDocs, urls
         if ranker is not None:
             startTime = time.time()
-            resDocs, resFullDocs, resUrls = self.rankDocs(query, docs, fullDocs, urls, ranker)
+            resDocs, resFullDocs, resUrls = self.rankDocs(clean_string(query, []), docs, fullDocs, urls, ranker)
             self.logDetails(f"ранжирование ", startTime)
 
         if ranker2 is not None and int(len(resDocs)*self.partForRanker2) + 1 > 1:
             rank2DocCount = int(len(resDocs)*self.partForRanker2) + 1
             startTime = time.time()
-            resDocs, resFullDocs, resUrls = self.rankDocs(query, resDocs[:rank2DocCount], resFullDocs[:rank2DocCount], resUrls[:rank2DocCount], ranker2)
+            resDocs, resFullDocs, resUrls = self.rankDocs(clean_string(query, []), resDocs[:rank2DocCount], resFullDocs[:rank2DocCount], resUrls[:rank2DocCount], ranker2)
             self.logDetails(f"ранжирование_2 ", startTime)
 
         resFullDocs, resUrls = list(resFullDocs), list(resUrls)[:len(resDocs)]
-        startTime = time.time()
-        summarizeCount = 5
-        summary = self.summarizeText(resFullDocs[:summarizeCount], query)
-        self.logDetails(f"суммаризация ", startTime)
+        if self.noSummarize:
+            summary = '-'
+        else:
+            startTime = time.time()
+            summarizeCount = 5
+            summary = self.summarizeText(resFullDocs[:summarizeCount], query)
+            self.logDetails(f"суммаризация ", startTime)
 
         response_message = f"Ответ на вопрос {query}: {summary} \n\n" + '\n'.join(resUrls)
         return query, response_message, resUrls

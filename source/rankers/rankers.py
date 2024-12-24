@@ -1,5 +1,5 @@
 import math
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import List
 import nltk
 from nltk.stem.snowball import SnowballStemmer
@@ -7,6 +7,13 @@ import pymorphy2
 from sentence_transformers import CrossEncoder, SentenceTransformer, util
 from abc import ABC, abstractmethod
 import numpy as np
+from utils import clean_string
+import pandas as pd
+
+pd_df = pd.read_csv('text_parser/data/df_table.csv', header = None)
+idf_db = dict()
+for i in range(len(pd_df)):
+    idf_db[pd_df.iloc[i, 0]] = np.log(742419 / int(pd_df.iloc[i, 1]))
 
 
 class DocsRanker(ABC):
@@ -34,8 +41,10 @@ class BM25WithProximity:
         term_freq = doc.count(term)
         if term_freq == 0:
             return 0
-        idf = math.log((self.total_docs) /
-                       (self.doc_freqs[term] + 1.0) + 1)
+        if term in idf_db:
+            idf = idf_db[term]
+        else:
+            idf = 0
         normalization = 1 - self.b + self.b * (doc_length / self.avg_doc_length)
         score = idf * ((term_freq * (self.k1 + 1)) /
                        (term_freq + self.k1 * normalization))
@@ -120,27 +129,88 @@ class BiEncoderRanker(DocsRanker):
         results = np.array([res['score'] for res in results])
         return results    
 
-def calculate_relevance(query: str, document: str, preprocess_func = None) -> float:
-    """
-    Оценивает релевантность документа запросу на основе кворума (числа совпавших слов).
-    
-    :param query: текст запроса
-    :param document: текст документа
-    :return: значение релевантности от 0 до 1
-    """
-
+def calculate_relevances_vanilla(query: str, documents: list, preprocess_func = None) -> float:
     if preprocess_func is None:
         preprocess_func = lambda doc: doc.split()
+    
+    relevances = np.zeros(len(documents))
 
     query_words = set(preprocess_func(query))
-    document_words = set(document.split())
+    documents_words = [set(doc.split()) for doc in documents]
 
     if len(query_words) == 0:
-        return 0.0
+        return relevances
     
-    intersection = query_words.intersection(document_words)
-    relevance = len(intersection) / len(query_words)
-    return relevance
+    for i in range(len(documents)):
+        intersection = query_words.intersection(documents_words[i])
+        relevances[i] = len(intersection) / len(query_words)
+    return relevances
+
+def calculate_relevances_idf(query: str, documents: list, preprocess_func = None) -> float:
+    if preprocess_func is None:
+        preprocess_func = lambda doc: doc.split()
+    
+    relevances = np.zeros(len(documents))
+
+    query_words = preprocess_func(query)
+    documents_words = [Counter(document.split()) for document in documents]
+    documents_len = [len(document.split()) for document in documents]
+
+    if len(query_words) == 0:
+        return relevances
+
+    word_doc = np.zeros((len(documents_words), len(query_words)))
+    for i in range(len(documents_words)):
+        doc = documents_words[i]
+        for j in range(len(query_words)):
+            query_word = query_words[j]
+            if query_word in doc:
+                word_doc[i][j] = 1 #doc[query_word] / documents_len[i]
+
+    idf = np.ones(len(query_words))
+    for i in range(len(query_words)):
+        if query_words[i] in idf_db:
+            idf[i] = idf_db[query_words[i]]
+    #print(idf)
+    
+    relevances = (word_doc * idf).sum(axis = 1) / idf.sum()
+    return relevances
+
+def calculate_relevances_tf_idf(query: str, documents: list, preprocess_func = None) -> float:
+    if preprocess_func is None:
+        preprocess_func = lambda doc: doc.split()
+    
+    relevances = np.zeros(len(documents))
+
+    query_words = preprocess_func(query)
+    documents_words = [Counter(document.split()) for document in documents] + [Counter(query_words)]
+    documents_len = [len(document.split()) for document in documents] + [len(query_words)]
+
+    if len(query_words) == 0:
+        return relevances
+
+    word_doc = np.zeros((len(documents_words), len(query_words)))
+    for i in range(len(documents_words)):
+        doc = documents_words[i]
+        for j in range(len(query_words)):
+            query_word = query_words[j]
+            if query_word in doc:
+                word_doc[i][j] = doc[query_word] / documents_len[i]
+
+    idf = np.ones(len(query_words))
+    for i in range(len(query_words)):
+        if query_words[i] in idf_db:
+            idf[i] = idf_db[query_words[i]]
+    
+    relevances = (word_doc * idf).sum(axis = 1)
+    relevances = relevances[:-1] / relevances[-1]
+    return relevances
 
 def documents_filter_quorum(query: str, documents: List[str], preprocess_func = None, threshold: float = 0.5) -> List[str]:
-    return [doc for doc in documents if calculate_relevance(query, doc, preprocess_func) > threshold]
+    relevances = calculate_relevances_idf(clean_string(query,[]), documents, preprocess_func)
+    return documents[relevances > threshold]
+
+class QuorumRanker(DocsRanker):
+    def rankDocuments(self, query, docs):
+        return calculate_relevances(clean_string(query,[]), docs, stem)
+        
