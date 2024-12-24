@@ -72,8 +72,9 @@ class Poiskovik(BaseHTTPRequestHandler):
         # return combinedIdx
 
         # 2 способ комбинирования
-        bm25Max = 45
-        textScoresNorm = textScores / bm25Max
+        textScoresNorm = []
+        if len(textScores) > 0:
+            textScoresNorm = (textScores - textScores.min() + 0.1) / (textScores.max() - textScores.min() + 0.5)
         index_weights = {}
         for i in range(max(len(vectIdxs), len(textIdxs))):
             if i < len(vectIdxs):
@@ -102,13 +103,13 @@ class Poiskovik(BaseHTTPRequestHandler):
         vectorIdxsForQueries, vectorScores = findVectorsIndexes(queries, self.modelEncoder, kDocuments, indexDb) # Поиск обратным индексом в векторной БД
         self.logDetails(f"векторный_обратный_индекс ", startTime)
         startTime = time.time()
-        textIdxsAndScoresForQueries, minScore, maxScore = findDocIndexesByTextSearch(queries, self.textDB, 2) # Поиск обратным индексом в текстовой БД
-        if len(textIdxsAndScoresForQueries) == 0:
-            return None
-        combinedIndexes = self.combineVectorAndTextIndexes(vectorIdxsForQueries, vectorScores, textIdxsAndScoresForQueries[:,0], textIdxsAndScoresForQueries[:, 1])
+        textIdxsForQueries, textScores, minScore, maxScore = findDocIndexesByTextSearch(queries, self.textDB, 2) # Поиск обратным индексом в текстовой БД
+        combinedIndexes = self.combineVectorAndTextIndexes(vectorIdxsForQueries, vectorScores, textIdxsForQueries, textScores)
         if self.data_base_type == "monolit":
             self.logDetails(f"текстовый_обратный_индекс ", startTime)
             self.logDetails(f"scores {minScore} {maxScore}", startTime)
+        if len(combinedIndexes) == 0:
+            return None
 
         startTime = time.time()
         urlsAndDocs = get_rows_from_sql(combinedIndexes, sqlConnection, self.useStemming).fillna('stub')
@@ -270,7 +271,7 @@ class Poiskovik(BaseHTTPRequestHandler):
     ranker2 = None
     partForRanker2 = 0.1
     quorum_threshold = 0.0
-    kDocs = 1000
+    kDocs = 400
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)

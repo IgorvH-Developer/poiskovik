@@ -75,9 +75,14 @@ def getVectorDB(path):
     return faiss.read_index(path)
 
 def findVectorsIndexes(query, encoder, kDocuments, index):
-    queryEmbd = encoder.encode(query, normalize_embeddings=True)
+    global sw_ru
+
+    queryEmbd = encoder.encode(clean_string(query, sw_ru), normalize_embeddings=True)
     D, I = index.search(np.array(queryEmbd), kDocuments)
     return I[:len(query)].flatten(), 1/(1+4*(D[:len(query)]**2).flatten())
+
+def textSearch(searcher, parsedCondition, lvl):
+    return [searcher.search(parsedCondition)], lvl
 
 def findDocIndexesByTextSearch(queries : list[str], textIndex, depthLevels = 0):
     global sw_ru
@@ -85,33 +90,38 @@ def findDocIndexesByTextSearch(queries : list[str], textIndex, depthLevels = 0):
     parser = QueryParser("content", textIndex.schema)
     searcher = textIndex.searcher(weighting=scoring.BM25F())
     indexesAndScores = []
-    searchCnds = []
+    searchCndsByLevels = []
     for query in queries:
         words = stem(clean_string(query, sw_ru))
         lenQuery = len(words)
-        searchCnds.append(" AND ".join(words))
-        for lvl in range(lenQuery-depthLevels, lenQuery):
+        searchCndsByLevels.append((0, " AND ".join(words)))
+        # for lvl in range(lenQuery-depthLevels, lenQuery):
+        for lvl in range(1, depthLevels+1):
+            operands = lenQuery - lvl
             if lvl < 1: break
-            searchCnds.extend(
-                [" AND ".join(words[i:i+lvl]) for i in range(lenQuery-lvl+1)]
+            searchCndsByLevels.extend(
+                [(lvl, " AND ".join(words[i:i+operands])) for i in range(lenQuery-operands+1)]
             )
     # conditionsStr = " OR ".join(searchCnds)
     with ThreadPoolExecutor() as executor:
         processed_cnd = {
-            executor.submit(searcher.search, parser.parse(conditionStr)): conditionStr
-            for conditionStr in searchCnds
+            executor.submit(textSearch, searcher, parser.parse(conditionStr), lvl): (lvl, conditionStr)
+            for lvl, conditionStr in searchCndsByLevels
         }
         for proc_cnd in processed_cnd:
-            indexesAndScores.extend([[float(result['title']), float(result.score)] for result in proc_cnd.result()])
+            lvl = proc_cnd.result()[1]
+            indexesAndScores.extend([
+                [float(result['title']), 1/(1+lvl)*float(result.score)] for result in proc_cnd.result()[0][0]
+            ])
 
     # condition = parser.parse(conditionsStr)
     # results = searcher.search(condition, limit=None)
     # indexesAndScores.extend([[result['title'], result.score] for result in results])
     if len(indexesAndScores) == 0:
-        return [], 0, 0
+        return np.array([]), np.array([]), 0, 0
     indexesAndScores = np.array(indexesAndScores)
     sorted_idx = np.argsort(indexesAndScores[:, 1])
-    return indexesAndScores[sorted_idx[::-1]], np.min(indexesAndScores[:, 1]), np.max(indexesAndScores[:, 1])  #indexesAndScores[:, 0][sorted_idx[::-1]]
+    return indexesAndScores[sorted_idx[::-1], 0], indexesAndScores[sorted_idx[::-1], 1], np.min(indexesAndScores[:, 1]), np.max(indexesAndScores[:, 1])  #indexesAndScores[:, 0][sorted_idx[::-1]]
 
 def get_rows_from_csv(filename, indices):
     df = pd.read_csv(
