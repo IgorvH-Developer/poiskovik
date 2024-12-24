@@ -100,7 +100,7 @@ def findDocIndexesByTextSearch(queries : list[str], textIndex, depthLevels = 0):
             searchCndsByLevels.extend(
                 [(lvl, " AND ".join(words[i:i+operands])) for i in range(lenQuery-operands+1)]
             )
-    # conditionsStr = " OR ".join(searchCnds)
+
     with ThreadPoolExecutor() as executor:
         processed_cnd = {
             executor.submit(textSearch, searcher, parser.parse(conditionStr), lvl): (lvl, conditionStr)
@@ -112,14 +112,11 @@ def findDocIndexesByTextSearch(queries : list[str], textIndex, depthLevels = 0):
                 [float(result['title']), 1/(1+lvl)*float(result.score)] for result in proc_cnd.result()[0][0]
             ])
 
-    # condition = parser.parse(conditionsStr)
-    # results = searcher.search(condition, limit=None)
-    # indexesAndScores.extend([[result['title'], result.score] for result in results])
     if len(indexesAndScores) == 0:
         return np.array([]), np.array([]), 0, 0
     indexesAndScores = np.array(indexesAndScores)
-    sorted_idx = np.argsort(indexesAndScores[:, 1])
-    return indexesAndScores[sorted_idx[::-1], 0], indexesAndScores[sorted_idx[::-1], 1], np.min(indexesAndScores[:, 1]), np.max(indexesAndScores[:, 1])  #indexesAndScores[:, 0][sorted_idx[::-1]]
+    sorted_idx = np.argsort(indexesAndScores[:, 1])[::-1]
+    return indexesAndScores[sorted_idx, 0], indexesAndScores[sorted_idx, 1], np.min(indexesAndScores[:, 1]), np.max(indexesAndScores[:, 1])  #indexesAndScores[:, 0][sorted_idx[::-1]]
 
 def get_rows_from_csv(filename, indices):
     df = pd.read_csv(

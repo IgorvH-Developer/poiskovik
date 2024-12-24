@@ -23,7 +23,6 @@ logging.basicConfig(
 class Poiskovik(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         super().__init__(request, client_address, server)
-        self.noSummarize = False
 
     def logDetails(self, text):
         logging.warning(f"{text}")
@@ -35,10 +34,10 @@ class Poiskovik(BaseHTTPRequestHandler):
 
     def summarizeText(self, docs, query=None):
         max_input = 512
-        task_prefix = "Find answer on question: "
+        task_prefix = "Нади ответ на вопрос: "
         input_seq = ""
         if query != None:
-            input_seq = " " + query + "\n" + "В тексте: "
+            input_seq = " " + query + "\n"
         input_seq += "\n".join(docs)
         input_seq = [input_seq]
         encoded = self.tokenizer(
@@ -253,10 +252,10 @@ class Poiskovik(BaseHTTPRequestHandler):
     metadataDBPathMonolit = "text_parser/data/data_bases/monolit/documentsMetadataDB.db"
     metadataDBPathSharded = [f"text_parser/data/data_bases/sharded/documentsMetadataDB_{shard}.db" for shard in range(shards_count)]
     modelEncoder = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-    # tokenizer = T5TokenizerFast.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
-    # modelSummarizer = T5ForConditionalGeneration.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
-    tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
-    modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
+    tokenizer = T5TokenizerFast.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
+    modelSummarizer = T5ForConditionalGeneration.from_pretrained('utrobinmv/t5_summary_en_ru_zh_base_2048')
+    # tokenizer = T5TokenizerFast.from_pretrained('UrukHan/t5-russian-summarization')
+    # modelSummarizer = AutoModelForSeq2SeqLM.from_pretrained('UrukHan/t5-russian-summarization')
 
     sqlConnectionMonolit = sqlite3.connect(metadataDBPathMonolit, check_same_thread=False)
     # sqlConnectionSharded = [sqlite3.connect(path, check_same_thread=False) for path in metadataDBPathSharded]
@@ -276,6 +275,7 @@ class Poiskovik(BaseHTTPRequestHandler):
     partForRanker2 = 0.1
     quorum_threshold = 0.0
     kDocs = 400
+    noSummarize = False
 
 def run(server_class=HTTPServer, handler_class=Poiskovik, port=8080):
     server_address = ('', port)
