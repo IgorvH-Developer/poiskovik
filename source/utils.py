@@ -74,12 +74,12 @@ def get_rows_from_sql(indexes, connection, useStemming):
 def getVectorDB(path):
     return faiss.read_index(path)
 
-def findVectorsIndexes(query, encoder, kDocuments, index):
+def findVectorsIndexes(queries, encoder, kDocuments, index):
     global sw_ru
 
-    queryEmbd = encoder.encode(clean_string(query, sw_ru), normalize_embeddings=True)
+    queryEmbd = encoder.encode([clean_string(query, sw_ru) for query in queries], normalize_embeddings=True)
     D, I = index.search(np.array(queryEmbd), kDocuments)
-    return I[:len(query)].flatten(), 1/(1+4*(D[:len(query)]**2).flatten())
+    return I[:len(queries)].flatten(), 1/(1+4*(D[:len(queries)]**2).flatten())
 
 def textSearch(searcher, parsedCondition, lvl):
     return [searcher.search(parsedCondition)], lvl
