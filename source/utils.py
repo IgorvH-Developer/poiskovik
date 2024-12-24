@@ -75,9 +75,7 @@ def getVectorDB(path):
     return faiss.read_index(path)
 
 def findVectorsIndexes(queries, encoder, kDocuments, index):
-    global sw_ru
-
-    queryEmbd = encoder.encode([clean_string(query, sw_ru) for query in queries], normalize_embeddings=True)
+    queryEmbd = encoder.encode(queries, normalize_embeddings=True)
     D, I = index.search(np.array(queryEmbd), kDocuments)
     return I[:len(queries)].flatten(), 1/(1+4*(D[:len(queries)]**2).flatten())
 
